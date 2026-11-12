@@ -49,9 +49,18 @@ import <seedfinder/seedfinder.ash>;
         return count;
     }
 
-    boolean contains_text_in_array(string [int] map1, string str) {
-        foreach num in map1 {
-            if (contains_text(map1[num], str))
+    // Ids mafia keeps comma-separated: baseballTeam, _locketMonstersFought,
+    // _roninStoragePulls, and mimicEggMonsters as id:count. A contains_text on
+    // one of these also matches inside a longer id -- 745 inside the remaindered
+    // skeleton's 1745, which this script fights in the skeleton store -- so
+    // compare the fields themselves. Same reason periledIn() splits.
+    boolean idInList(string list, int id) {
+        string [int] fields = split_string(list, ",");
+        foreach num in fields {
+            string field = fields[num];
+            if (field.contains_text(":"))
+                field = field.substring(0, field.index_of(":"));
+            if (field.to_int() == id)
                 return true;
         }
         return false;
@@ -194,10 +203,7 @@ import <seedfinder/seedfinder.ash>;
 
 // Game Mechanics
     boolean pulledToday(item it) {
-        string [int] pulledToday = split_string(get_property("_roninStoragePulls"), ",");
-        if (contains_text_in_array(pulledToday, it.to_int().to_string()))
-            return true;
-        return false;
+        return idInList(get_property("_roninStoragePulls"), it.to_int());
     }
 
     int reservedPulls(){

@@ -946,8 +946,10 @@ void main(int round, monster mob, string page_text) {
                     use_skill($skill[Back-Up to your Last Enemy]);
                     if (get_property("NCtoC") != "true")
                         use_if_have_skill(page_text, $skill[BCZ: Refracted Gaze]);
-                if (have_equipped($item[legendary seal-clubbing club]) && get_property("NCtoC") == "false" && to_int(get_property("_clubEmBattlefieldUsed")) < 5)
-                    use_skill($skill[Club 'Em Across the Battlefield]);
+                    // NCtoC is unset until an NC is first turned into a combat,
+                    // so test it the way the other guards here do.
+                    if (have_equipped($item[legendary seal-clubbing club]) && get_property("NCtoC") != "true" && to_int(get_property("_clubEmBattlefieldUsed")) < 5)
+                        use_skill($skill[Club 'Em Across the Battlefield]);
                     if (free_monster(last_monster())) {
                         cleanUp();
                     } else {

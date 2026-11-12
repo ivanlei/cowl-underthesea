@@ -17,6 +17,11 @@ void stashboxCheck(int [int] priority) {
             return;
         }
     }
+    // Every spot has been searched already and the choice is still on screen,
+    // so re-search the first rather than leave it unanswered: these choices
+    // have no default and mafia drops to manual control, as case 315 notes.
+    if (count(priority) > 0)
+        run_choice(priority[0]);
 }
 
 // Search available choices for the first text match and pick it.
@@ -222,13 +227,16 @@ void main(int whichchoice, string page) {
         // ── Map the Monsters ───────────────────────────────────────
         // "Leading Yourself Right to Them". Same intent as the Peridot, but a
         // different parameter name. Only cast in zones we have a preference
-        // for, so the lookup should always hit; if it somehow does not, fall
-        // through and let mafia resolve rather than pick a monster at random.
+        // for, so the lookup should always hit; where it does not, option 2 is
+        // "The Exit", which picks no monster and leaves the cast armed --
+        // mafia has no default for 1435, so falling through stops the run.
         case 1435:
             location mapHere = my_location();
             int mapTarget = zoneTarget(mapHere);
             if (mapTarget > 0)
                 run_choice(1, "heyscriptswhatsupwinkwink=" + mapTarget);
+            else
+                run_choice(2);
             break;
 
         case 1483:
@@ -267,6 +275,12 @@ void main(int whichchoice, string page) {
             if (target > 0) {
                 run_choice(1, "bandersnatch=" + target);
                 if (here == $location[The Coral Corral]) run_choice(2);
+            } else {
+                // The peridot is +15 item drop, so a maximizer with an item
+                // goal can wear it into a zone the table says nothing about --
+                // the skeleton store is one. Option 2 is "I choose peace",
+                // which picks no monster; leaving it unanswered stops the run.
+                run_choice(2);
             }
             break;
 

@@ -580,34 +580,14 @@ import <seedfinder/seedfinder.ash>;
         return freeRun();
     }
 
-        int [int] mobiusEncounters = {
-        0:0,
-        1:4,
-        2:7,
-        3:13,
-        4:19,
-        5:25,
-        6:31,
-        7:41,
-        8:41,
-        9:41,
-        10:41,
-        11:41,
-        12:51,
-        13:51,
-        14:51,
-        15:51,
-        16:51,
-        17:76,
-        18:76,
-        19:76,
-        20:76
-    };
-
+    // mafia's own table rather than a copy of it: the local one held each delay
+    // one index early, so 0 encounters meant no delay and a fresh day read
+    // ready from turn one, and past 20 encounters the missing key read 0 and
+    // said ready again. It also skipped _mobiusRingPrimed, and counted from
+    // _lastMobiusStripTurn where the first encounter counts from
+    // _mobiusRingPrimedTurn. The function has been in since r28925.
     boolean MobiusNCReady(){
-        if (total_turns_played( ) > get_property("_lastMobiusStripTurn").to_int() + mobiusEncounters[get_property("_mobiusStripEncounters").to_int()])
-            return true;
-        return false;
+        return turns_until_mobius_noncombat_available() == 0;
     }
 
     boolean slotsHold(item [slot] selection, item it) {

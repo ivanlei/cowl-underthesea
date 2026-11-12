@@ -112,16 +112,33 @@ import <seedfinder/seedfinder.ash>;
             && !have_item($item[august scepter]);
     }
 
+    // split_string("") is one empty field rather than none, so counting the
+    // fields of an unwritten _locketMonstersFought reads a reminisce as spent.
+    int locketFightsUsed() {
+        string used = get_property("_locketMonstersFought");
+        if (used == "")
+            return 0;
+        return count_substring(used, ",") + 1;
+    }
+
+    // The DNA bank extracts an egg for 100 familiar XP, and its 11 eggs a day
+    // are the same 11 lay an egg spends, so experience alone overcounts once a
+    // day is under way -- and summon() aborts if it extracts past the cap.
+    int mimicExtractsLeft() {
+        if (!have_familiar($familiar[chest mimic]))
+            return 0;
+        int byXP = floor($familiar[chest mimic].experience/100);
+        int byCap = 11 - to_int(get_property("_mimicEggsObtained"));
+        return max(0, min(byXP, byCap));
+    }
+
     int count_summons(){
         int n;
         if (get_property("_photocopyUsed") == "false" && have_item($item[Clan VIP Lounge key]))
             n += 1;
-        if (available_amount($item[combat lover's locket]) > 0){
-            string [int] lockets = split_string(get_property("_locketMonstersFought"), ",");
-            n += 3-count(lockets);
-        }
-        if (have_familiar($familiar[chest mimic]))
-            n += floor($familiar[chest mimic].experience/200);
+        if (available_amount($item[combat lover's locket]) > 0)
+            n += 3 - locketFightsUsed();
+        n += mimicExtractsLeft();
         return n;
     }
 

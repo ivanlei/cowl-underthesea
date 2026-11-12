@@ -932,7 +932,7 @@ import <seedfinder/seedfinder.ash>;
             "low underground":"leftleg1",
             "mid outdoor":"rightarm1",
             "low indoor":"leftarm1",
-            "high underground":"collectionprow1"
+            "mid underground":"cowcatcher"
         };
         string autumnOptions = visit_url("inv_use.php?" + my_hash() + "&which=3&whichitem=10954");
         int [int] locations;
@@ -1856,7 +1856,13 @@ int NCForceEstimate(){
     if (available_amount($item[McHugeLarge left ski]) > 0)
         force += max(0, 3 - to_int(get_property("_mcHugeLargeAvalancheUses")));
     if (available_amount($item[Cincho de Mayo]) > 0)
-        force += min(3, 1 + max(0, total_free_rests() - to_int(get_property("timesRested"))) / 2);
+        // 100 cinch a day, 60 per Fiesta Exit, and a free rest loosens 30 for
+        // the first five. _cinchUsed is what has already gone, which the old
+        // 1 + rests/2 ignored while also coming out a cast low at odd rest
+        // counts. The taper past five rests stays out: three casts need 180
+        // cinch, which is inside the first few rests, and min caps it there.
+        force += min(3, (100 - to_int(get_property("_cinchUsed"))
+            + 30 * max(0, total_free_rests() - to_int(get_property("timesRested")))) / 60);
     if (available_amount($item[Jurassic Parka]) > 0)
         force += max(0, 5 - to_int(get_property("_spikolodonSpikeUses")));
     return force;

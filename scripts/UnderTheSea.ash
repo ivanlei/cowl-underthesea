@@ -307,7 +307,7 @@ string DropsItems;
                 } else if (highShiny() || lowShiny() && !pulledToday($item[Aldebaran sardines])){
                     item cheap_pasta;
                     int lowest_value = 999999999;
-                    foreach it, value in pasta_prices {
+                    foreach it, value in pastaPrices() {
                         if (value < lowest_value) {
                             lowest_value = value;
                             cheap_pasta = it;

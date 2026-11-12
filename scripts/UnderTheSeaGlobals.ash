@@ -33,8 +33,15 @@ import <seedfinder/seedfinder.ash>;
     };
     stat ps = my_primestat();
     int [item] pasta_prices;
-    foreach it in $items[Frutti di Scatoletta,Pesto alla Marziano,Arrattabbattabiata,Orzo di Riso,Pasta Grimavera,Linguini Ubriacapa,Gnocci Domani,Formica e Pepe,Tubetto Gelatto]{
-        pasta_prices[it] = mall_price(it);
+    // Nine mall searches, so they wait for the one branch that reads them.
+    // This file is imported by the CCS and the choice script as well, and
+    // neither wants the prices -- at top level the first consult round of the
+    // day paid for them mid-fight.
+    int [item] pastaPrices() {
+        if (count(pasta_prices) == 0)
+            foreach it in $items[Frutti di Scatoletta,Pesto alla Marziano,Arrattabbattabiata,Orzo di Riso,Pasta Grimavera,Linguini Ubriacapa,Gnocci Domani,Formica e Pepe,Tubetto Gelatto]
+                pasta_prices[it] = mall_price(it);
+        return pasta_prices;
     }
 // ─── UTILITY HELPERS ────────────────────────────────────────────────────────
     int count_substring(string text, string sub) {
@@ -440,10 +447,16 @@ import <seedfinder/seedfinder.ash>;
 
     // A lounge item needs the key in inventory and that item in the current clan.
     // Asking for a missing one is a mafia abort that no capture clears, so check first.
+    // Fetched once: the mood loops ask about the same two furnishings on every
+    // pass. A clan change mid-run would need loungePage cleared, and the only
+    // thing that would do that, whitelist(), is never called.
+    string loungePage;
     boolean loungeHas(string image) {
         if (item_amount($item[Clan VIP Lounge key]) == 0)
             return false;
-        return contains_text(visit_url("clan_viplounge.php"), image);
+        if (loungePage == "")
+            loungePage = visit_url("clan_viplounge.php");
+        return contains_text(loungePage, image);
     }
 
     // Assert your Authority needs all three props worn at once. Same test
@@ -1921,14 +1934,14 @@ void NCforce() {
         } else if (available_amount($item[Cincho de Mayo]) > 0
             && (get_property("_cinchUsed").to_int() <= 40
                 || get_property("timesRested").to_int() < total_free_rests())){
+            // The helmet sweetens the rest but is optional; equipping it
+            // unowned hard-errors. Resting does not take it off, so it goes on
+            // once rather than on every pass of the loop.
+            if (available_amount($item[Apriling band helmet]) > 0)
+                cli_execute("unequip hat; equip apriling band helmet");
             while (get_property("_cinchUsed").to_int() > 40
-                && get_property("timesRested").to_int() < total_free_rests()) {
-                // The helmet sweetens the rest but is optional; equipping it
-                // unowned hard-errors.
-                if (available_amount($item[Apriling band helmet]) > 0)
-                    cli_execute("unequip hat; equip apriling band helmet");
+                && get_property("timesRested").to_int() < total_free_rests())
                 cli_execute("camp rest free");
-            }
             if (get_property("_cinchUsed").to_int() <= 40) {
                 equip($slot[acc3], $item[cincho de mayo]);
                 use_skill($skill[Cincho: Fiesta Exit]);
@@ -2044,11 +2057,11 @@ boolean banisherFree(string banisher, location loc) {
 
 // Returns true if the given banisher has been used on a monster at your current location
 boolean banishUsedAtYourLocation(string banisher) {
-    foreach num in monster_found_in(banished(banisher)) {
-        if (monster_found_in(banished(banisher))[num] == my_location())
-            return true;
-    }
-    return false;
+    // Asked of up to seven banishers per combat round, so it looks the monster
+    // up in this location rather than through monster_found_in(), which walks
+    // every location in the game -- and was called again inside its own loop.
+    monster used = banished(banisher);
+    return used != $monster[none] && my_location().get_location_monsters() contains used;
 }
 
 // Equips the appropriate banish gear for a location (that hasn't been used yet) and sets the slot override property.
@@ -2501,11 +2514,11 @@ void pullChecklist() {
             && $items[pro skateboard, software glitch] contains it)
             continue;
         // Never auto-bought (see the pull loop) -- flag it as a nice-to-have.
-        if (it == $item[Congressional Medal of Insanity] && storage_amount(it) == 0 && get_inventory()[it] == 0) {
+        if (it == $item[Congressional Medal of Insanity] && storage_amount(it) == 0 && item_amount(it) == 0) {
             print("✗ " + it + " — Currently not optional, just too expensive to have the script buy on its own", "red");
             continue;
         }
-        if (storage_amount(it) > 0 || get_inventory()[it] > 0)
+        if (storage_amount(it) > 0 || item_amount(it) > 0)
             print("✓ " + it, "blue");
         else if (is_tradeable(it))
             print("✗ " + it + " — will be mall-bought if the route needs it", "red");

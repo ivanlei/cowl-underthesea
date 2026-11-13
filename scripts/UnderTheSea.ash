@@ -1036,7 +1036,7 @@ string DropsItems;
             if (get_property("_photocopyUsed") == "false" && have_item($item[Clan VIP Lounge key]) && (faxbot(mon) || faxbot(mon) || faxbot(mon))){
                 use($item[photocopied monster]);
                 run_combat();
-            } else if ($familiar[chest mimic].experience > 200) {
+            } else if (mimicExtractsLeft() > 0) {
                 if (!idInList(get_property("mimicEggMonsters"), to_int(mon)))
                     cli_execute("c2t_megg extract " + mon);
                 if (item_amount($item[mimic egg]) == 0)

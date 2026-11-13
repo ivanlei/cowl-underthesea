@@ -2285,22 +2285,25 @@ string DropsItems;
                 cli_execute("acquire waterlogged scroll of healing, sea gel, Doc Galaktik's Pungent Unguent, Doc Galaktik's Homeopathic Elixir; cast cannel");
                 // Null Afternoon stands in for the delevelers while it lasts.
                 if (have_effect($effect[null afternoon]) == 0) {
-                    if (delevelers() < 2 && !pulledToday($item[null-day exploit]) && pulls_remaining() > 0 && !lowShiny()
+                    if (!yogDelevelersEnough() && !pulledToday($item[null-day exploit]) && pulls_remaining() > 0 && !lowShiny()
                             && pullSequence($item[null-day exploit])) {
                             use($item[null-day exploit]);
-                    } else if (delevelers() < 2){
+                    } else if (!yogDelevelersEnough()){
                         string why = pulledToday($item[null-day exploit])
                             ? "the null-day exploit was already pulled today"
                             : lowShiny() ? "low shiny runs don't pull a null-day exploit here"
                             : "no pulls are left for a null-day exploit";
                         int farmStart = turns_played();
                         int noticeAt = 10;
-                        while (delevelers() < 2) {
+                        while (!yogDelevelersEnough()) {
                             getMissingCorralItems();
                             int farmed = turns_played() - farmStart;
                             if (farmed > noticeAt) {
-                                print("Deleveler farming: " + farmed + " turns in The Coral Corral for delevelers. "
-                                    + "Yog-Urt needs 2 delevelers and " + delevelers() + " are on hand; "
+                                yogDelevel left = yogAfterDelevelers();
+                                print("Deleveler farming: " + farmed + " turns in The Coral Corral. "
+                                    + "What is on hand would leave Yog-Urt at " + left.atk + " attack and "
+                                    + left.def + " defence, against " + (my_buffedstat($stat[moxie]) + 10)
+                                    + " moxie and " + (my_buffedstat($stat[muscle]) - 30) + " muscle; "
                                     + why + ".", "red");
                                 noticeAt = farmed + 10 - farmed % 10;
                             }
@@ -2359,8 +2362,10 @@ string DropsItems;
                     farmPrayerbeads();
                     continue;
                 }
-                // Prayerbead farming can outlast Null Afternoon; restock delevelers first.
-                if (have_effect($effect[null afternoon]) == 0 && delevelers() < 2)
+                // Prayerbead farming can outlast Null Afternoon; restock delevelers
+                // first. This is the check that decides, since the fight's own outfit
+                // is on by here and so the moxie read is the one the fight will use.
+                if (have_effect($effect[null afternoon]) == 0 && !yogDelevelersEnough())
                     continue;
                 adv($location[Mer-kin Temple (Right Door)]);
             }

@@ -1,11 +1,41 @@
 # UnderTheSea
 11,037 Leagues Under the Sea loop.
 
-`git checkout Astro3207/UnderTheSea`
+## Install
+
+In the gCLI:
+
+```
+git checkout ivanlei/cowl-underthesea
+```
+
+That is all of it. `dependencies.txt` brings `C2Talon/c2t_megg`,
+`VeeArrKoL/seedfinder` and `xn/pearlo` along with it, since mafia's
+`gitInstallDependencies` is on by default -- if you have turned it off, install
+those three yourself.
+
+Update the same way everything else does:
+
+```
+git update
+```
+
+### Where this came from
+
+This is a copy of [Astro3207/UnderTheSea](https://github.com/Astro3207/UnderTheSea)
+with fixes on top, not a replacement for it: the loop, the route and every
+decision in it are that repository's work. The fixes here are to the counting
+and the guards around it. Upstream is the place to look for the original and
+for anything not fixed here.
+
+Run one or the other, not both -- they install to the same script names.
 
 ## Hard requirements
 
-- **KoLmafia r29057 or newer.**
+- **KoLmafia r29402 or newer.** `UnderTheSeaGlobals.ash` opens with
+  `since r29402`, which is checked when the script compiles, so an older build
+  does not load it at all. (An older abort inside the script still names
+  r29057; the `since` is the one that decides.)
 - **A softcore run.** Hardcore isn't supported and stops at the start.
 - **`autoSatisfyWithNPCs = true`** in mafia's preferences.
 - **Aftercore mode (running the sea outside the path):** The script prompts for which boss to fight.

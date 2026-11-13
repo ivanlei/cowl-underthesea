@@ -307,7 +307,7 @@ string DropsItems;
                 } else if (highShiny() || lowShiny() && !pulledToday($item[Aldebaran sardines])){
                     item cheap_pasta;
                     int lowest_value = 999999999;
-                    foreach it, value in pasta_prices {
+                    foreach it, value in pastaPrices() {
                         if (value < lowest_value) {
                             lowest_value = value;
                             cheap_pasta = it;
@@ -918,7 +918,7 @@ string DropsItems;
         mapMonster($location[The Coral Corral]);
         adv($location[The Coral Corral]);
         timeSpinnerRefight($location[The Coral Corral]);
-        if (contains_text(get_property("baseballTeam"),"775") && baseballPlayers() == 9 && item_amount($item[sea cowbell]) <3)
+        if (idInList(get_property("baseballTeam"), 775) && baseballPlayers() == 9 && item_amount($item[sea cowbell]) <3)
             baseballD();
     }
 
@@ -1028,7 +1028,7 @@ string DropsItems;
     }
 
     boolean summon(monster mon){
-        if (available_amount($item[Combat lover's locket]) > 0 && haveLocketMonster[mon] && !contains_text(get_property("_locketMonstersFought"),to_int(mon)) && count_substring(get_property("_locketMonstersFought"),",") < 2) {
+        if (available_amount($item[Combat lover's locket]) > 0 && haveLocketMonster[mon] && !idInList(get_property("_locketMonstersFought"), to_int(mon)) && count_substring(get_property("_locketMonstersFought"),",") < 2) {
             cli_execute("reminisce " + mon);
         } else {
             if (available_amount($item[Combat lover's locket]) > 0)
@@ -1037,7 +1037,7 @@ string DropsItems;
                 use($item[photocopied monster]);
                 run_combat();
             } else if (mimicExtractsLeft() > 0) {
-                if (!contains_text(get_property("mimicEggMonsters"),to_int(mon)))
+                if (!idInList(get_property("mimicEggMonsters"), to_int(mon)))
                     cli_execute("c2t_megg extract " + mon);
                 if (item_amount($item[mimic egg]) == 0)
                     abort("mimice egg failed to extract. Rerun and if this happens again ping FS");
@@ -1401,7 +1401,7 @@ string DropsItems;
 
             if (my_path().id == 55){
                 //Waste baseball if you don't have steely eyed squint and not a lot of NCforces since you may need to save the pull for a pearl necklace
-                if (!have_skill($skill[Steely-Eyed Squint]) && NCForceEstimate() < 4 && contains_text(get_property("baseballTeam"),"773") && baseballPlayers() == 9)
+                if (!have_skill($skill[Steely-Eyed Squint]) && NCForceEstimate() < 4 && idInList(get_property("baseballTeam"), 773) && baseballPlayers() == 9)
                     baseballD();
                 
                 //If you can't do caliginous abyss in cyberrealm, then BoFa them into outpost
@@ -1496,7 +1496,7 @@ string DropsItems;
     void unholyDiver(string str){
         step("phase: rusty rivets");
         while (!diverPartsComplete() && to_slot(divingHelmet()) != $slot[hat]) {
-            if (baseballPlayers() >= 9 && contains_text(get_property("baseballTeam"),"745"))
+            if (baseballPlayers() >= 9 && idInList(get_property("baseballTeam"), 745))
                 baseballD();
             switch (str) {
                 case "summon":
@@ -1521,7 +1521,7 @@ string DropsItems;
                                 yellowRayPrep();
                             }
                             if (item_amount($item[mimic egg]) > 0
-                                && contains_text(get_property("mimicEggMonsters"), "745")){
+                                && idInList(get_property("mimicEggMonsters"), 745)){
                                 cli_execute("c2t_megg fight unholy diver");
                                 run_combat();
                                 if (handling_choice() && last_choice() == 1387)
@@ -1535,10 +1535,10 @@ string DropsItems;
                             } else {
                                 break;
                             }
-                            if (baseballPlayers() >= 9 && contains_text(get_property("baseballTeam"),"745"))
+                            if (baseballPlayers() >= 9 && idInList(get_property("baseballTeam"), 745))
                                 baseballD();
                         }
-                        if (baseballPlayers() >= 9 && contains_text(get_property("baseballTeam"),"745"))
+                        if (baseballPlayers() >= 9 && idInList(get_property("baseballTeam"), 745))
                             baseballD();
                         while (item_amount($item[rusty rivet]) > 5 && item_amount($item[rusty rivet]) < 8 && get_property("_monkeyPawWishesUsed").to_int() < 5 && have_item($item[cursed monkey's paw]))
                             cli_execute("monkeypaw wish rusty rivet");
@@ -2052,7 +2052,7 @@ string DropsItems;
                             conditional += "monodent of the sea,";
                         if (to_int(get_property("_clubEmBattlefieldUsed")) < 5)
                             conditional += if_equip($item[legendary seal-clubbing club]);
-                        else if (baseballPlayers() < 9 || !contains_text(get_property("baseballTeam"),"838"))
+                        else if (baseballPlayers() < 9 || !idInList(get_property("baseballTeam"), 838))
                             conditional += if_equip($item[baseball diamond]);
                         tempEquipment("-combat,sea", "crappy Mer-kin tailpiece,crappy Mer-kin mask,"
                             + if_equip($item[blood cubic zirconia]) + bathysphere($item[toy cupid bow])
@@ -2065,7 +2065,7 @@ string DropsItems;
 
                     // Get mer-kin bunwig if missing
                     while (available_amount($item[mer-kin bunwig]) == 0 && !libraryReady()) {
-                        if (contains_text(get_property("baseballTeam"),"773") && baseballPlayers() == 9){
+                        if (idInList(get_property("baseballTeam"), 773) && baseballPlayers() == 9){
                             baseballD();
                             continue;
                         }
@@ -2119,7 +2119,7 @@ string DropsItems;
                     while (get_property("merkinElementaryTeacherUnlock") == "false") {
                         put_closet(item_amount($item[mer-kin hallpass]), $item[mer-kin hallpass]);
                         string conditional;
-                        if (baseballPlayers() < 9 || !contains_text(get_property("baseballTeam"),"838"))
+                        if (baseballPlayers() < 9 || !idInList(get_property("baseballTeam"), 838))
                             conditional += if_equip($item[baseball diamond]);
                         use_familiar("-combat");
                         tempEquipment("-combat,sea", "monodent of the sea,crappy Mer-kin tailpiece,crappy Mer-kin mask," + if_equip($item[blood cubic zirconia])
@@ -2285,30 +2285,32 @@ string DropsItems;
                 cli_execute("acquire waterlogged scroll of healing, sea gel, Doc Galaktik's Pungent Unguent, Doc Galaktik's Homeopathic Elixir; cast cannel");
                 // Null Afternoon stands in for the delevelers while it lasts.
                 if (have_effect($effect[null afternoon]) == 0) {
-                    if (delevelers() < 2 && !pulledToday($item[null-day exploit]) && pulls_remaining() > 0 && !lowShiny()
+                    if (!yogDelevelersEnough() && !pulledToday($item[null-day exploit]) && pulls_remaining() > 0 && !lowShiny()
                             && pullSequence($item[null-day exploit])) {
                             use($item[null-day exploit]);
-                    } else if (delevelers() < 2){
+                    } else if (!yogDelevelersEnough()){
                         string why = pulledToday($item[null-day exploit])
                             ? "the null-day exploit was already pulled today"
                             : lowShiny() ? "low shiny runs don't pull a null-day exploit here"
                             : "no pulls are left for a null-day exploit";
                         int farmStart = turns_played();
                         int noticeAt = 10;
-                        while (delevelers() < 2) {
+                        while (!yogDelevelersEnough()) {
                             getMissingCorralItems();
                             int farmed = turns_played() - farmStart;
                             if (farmed > noticeAt) {
-                                print("Deleveler farming: " + farmed + " turns in The Coral Corral for delevelers. "
-                                    + "Yog-Urt needs 2 delevelers and " + delevelers() + " are on hand; "
+                                yogDelevel left = yogAfterDelevelers();
+                                print("Deleveler farming: " + farmed + " turns in The Coral Corral. "
+                                    + "What is on hand would leave Yog-Urt at " + left.atk + " attack and "
+                                    + left.def + " defence, against " + (my_buffedstat($stat[moxie]) + 10)
+                                    + " moxie and " + (my_buffedstat($stat[muscle]) - 30) + " muscle; "
                                     + why + ".", "red");
                                 noticeAt = farmed + 10 - farmed % 10;
                             }
                         }
                     }
                 }
-                if (available_amount($item[mer-kin prayerbeads]) < 3 && pulledToday($item[mer-kin prayerbeads]))
-                    pullSequence($item[mer-kin prayerbeads]);
+                pullPrayerbead();
 
                 // Equip as many prayerbeads as available, pull healing items for gaps
                 if (YogHealingsNeeded[available_amount($item[mer-kin prayerbeads])] - YogHealingsOwned() > pulls_remaining( )){
@@ -2360,8 +2362,10 @@ string DropsItems;
                     farmPrayerbeads();
                     continue;
                 }
-                // Prayerbead farming can outlast Null Afternoon; restock delevelers first.
-                if (have_effect($effect[null afternoon]) == 0 && delevelers() < 2)
+                // Prayerbead farming can outlast Null Afternoon; restock delevelers
+                // first. This is the check that decides, since the fight's own outfit
+                // is on by here and so the moxie read is the one the fight will use.
+                if (have_effect($effect[null afternoon]) == 0 && !yogDelevelersEnough())
                     continue;
                 adv($location[Mer-kin Temple (Right Door)]);
             }

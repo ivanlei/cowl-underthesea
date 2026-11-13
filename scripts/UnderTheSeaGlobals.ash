@@ -33,8 +33,15 @@ import <seedfinder/seedfinder.ash>;
     };
     stat ps = my_primestat();
     int [item] pasta_prices;
-    foreach it in $items[Frutti di Scatoletta,Pesto alla Marziano,Arrattabbattabiata,Orzo di Riso,Pasta Grimavera,Linguini Ubriacapa,Gnocci Domani,Formica e Pepe,Tubetto Gelatto]{
-        pasta_prices[it] = mall_price(it);
+    // Nine mall searches, so they wait for the one branch that reads them.
+    // This file is imported by the CCS and the choice script as well, and
+    // neither wants the prices -- at top level the first consult round of the
+    // day paid for them mid-fight.
+    int [item] pastaPrices() {
+        if (count(pasta_prices) == 0)
+            foreach it in $items[Frutti di Scatoletta,Pesto alla Marziano,Arrattabbattabiata,Orzo di Riso,Pasta Grimavera,Linguini Ubriacapa,Gnocci Domani,Formica e Pepe,Tubetto Gelatto]
+                pasta_prices[it] = mall_price(it);
+        return pasta_prices;
     }
 // ─── UTILITY HELPERS ────────────────────────────────────────────────────────
     int count_substring(string text, string sub) {
@@ -49,9 +56,18 @@ import <seedfinder/seedfinder.ash>;
         return count;
     }
 
-    boolean contains_text_in_array(string [int] map1, string str) {
-        foreach num in map1 {
-            if (contains_text(map1[num], str))
+    // Ids mafia keeps comma-separated: baseballTeam, _locketMonstersFought,
+    // _roninStoragePulls, and mimicEggMonsters as id:count. A contains_text on
+    // one of these also matches inside a longer id -- 745 inside the remaindered
+    // skeleton's 1745, which this script fights in the skeleton store -- so
+    // compare the fields themselves. Same reason periledIn() splits.
+    boolean idInList(string list, int id) {
+        string [int] fields = split_string(list, ",");
+        foreach num in fields {
+            string field = fields[num];
+            if (field.contains_text(":"))
+                field = field.substring(0, field.index_of(":"));
+            if (field.to_int() == id)
                 return true;
         }
         return false;
@@ -211,10 +227,7 @@ import <seedfinder/seedfinder.ash>;
 
 // Game Mechanics
     boolean pulledToday(item it) {
-        string [int] pulledToday = split_string(get_property("_roninStoragePulls"), ",");
-        if (contains_text_in_array(pulledToday, it.to_int().to_string()))
-            return true;
-        return false;
+        return idInList(get_property("_roninStoragePulls"), it.to_int());
     }
 
     int reservedPulls(){
@@ -457,10 +470,16 @@ import <seedfinder/seedfinder.ash>;
 
     // A lounge item needs the key in inventory and that item in the current clan.
     // Asking for a missing one is a mafia abort that no capture clears, so check first.
+    // Fetched once: the mood loops ask about the same two furnishings on every
+    // pass. A clan change mid-run would need loungePage cleared, and the only
+    // thing that would do that, whitelist(), is never called.
+    string loungePage;
     boolean loungeHas(string image) {
         if (item_amount($item[Clan VIP Lounge key]) == 0)
             return false;
-        return contains_text(visit_url("clan_viplounge.php"), image);
+        if (loungePage == "")
+            loungePage = visit_url("clan_viplounge.php");
+        return contains_text(loungePage, image);
     }
 
     // Assert your Authority needs all three props worn at once. Same test
@@ -597,34 +616,14 @@ import <seedfinder/seedfinder.ash>;
         return freeRun();
     }
 
-        int [int] mobiusEncounters = {
-        0:0,
-        1:4,
-        2:7,
-        3:13,
-        4:19,
-        5:25,
-        6:31,
-        7:41,
-        8:41,
-        9:41,
-        10:41,
-        11:41,
-        12:51,
-        13:51,
-        14:51,
-        15:51,
-        16:51,
-        17:76,
-        18:76,
-        19:76,
-        20:76
-    };
-
+    // mafia's own table rather than a copy of it: the local one held each delay
+    // one index early, so 0 encounters meant no delay and a fresh day read
+    // ready from turn one, and past 20 encounters the missing key read 0 and
+    // said ready again. It also skipped _mobiusRingPrimed, and counted from
+    // _lastMobiusStripTurn where the first encounter counts from
+    // _mobiusRingPrimedTurn. The function has been in since r28925.
     boolean MobiusNCReady(){
-        if (total_turns_played( ) > get_property("_lastMobiusStripTurn").to_int() + mobiusEncounters[get_property("_mobiusStripEncounters").to_int()])
-            return true;
-        return false;
+        return turns_until_mobius_noncombat_available() == 0;
     }
 
     boolean slotsHold(item [slot] selection, item it) {
@@ -803,6 +802,51 @@ import <seedfinder/seedfinder.ash>;
         return n;
     }
 
+    // Where the delevelers on hand would leave Yog-Urt, thrown in the order
+    // yogDeleveler() picks them -- the list's own order, which is not the order
+    // that would remove the most. One throw per item type a fight, so which
+    // types are held is what counts and not how many of each.
+    //
+    // The mouthsoap and the cowbell are flat and spaded; the crayon shavings
+    // take a share of whatever is left. The table tennis ball and the sea lasso
+    // delevel too, by amounts nobody has spaded, so they are counted for
+    // nothing: farming one item too many costs turns, walking in one short
+    // costs the fight.
+    record yogDelevel { int atk; int def; };
+
+    yogDelevel yogAfterDelevelers() {
+        monster yog = $monster[Yog-Urt, Elder Goddess of Hatred];
+        yogDelevel left = new yogDelevel(monster_attack(yog), monster_defense(yog));
+        foreach it in $items[Mer-kin mouthsoap,crayon shavings,table tennis ball,sea lasso,sea cowbell] {
+            if (item_amount(it) == 0)
+                continue;
+            if (it == $item[Mer-kin mouthsoap]) {
+                left.atk -= 250;
+                left.def -= 250;
+            } else if (it == $item[sea cowbell]) {
+                left.atk -= 164;
+                left.def -= 154;
+            } else if (it == $item[crayon shavings]) {
+                left.atk -= left.atk * 30 / 100;
+                left.def -= left.def * 30 / 100;
+            }
+        }
+        left.atk = max(0, left.atk);
+        left.def = max(0, left.def);
+        return left;
+    }
+
+    // Enough for this character, rather than a number of items: the same test
+    // yogDeleveler() applies in the fight, so the prep stops farming where the
+    // fight stops asking. It reads whatever is worn at the time, so during
+    // farming it comes out low and errs toward one item too many; the check
+    // after the fight's own outfit goes on is the one that decides.
+    boolean yogDelevelersEnough() {
+        yogDelevel left = yogAfterDelevelers();
+        return my_buffedstat($stat[moxie]) + 10 > left.atk
+            && my_buffedstat($stat[muscle]) - 30 > left.def;
+    }
+
     void eatSushi(){
         string [item] sushi_map = {
             $item[beefy fish meat]:	        "beefy nigiri",
@@ -949,7 +993,7 @@ import <seedfinder/seedfinder.ash>;
             "low underground":"leftleg1",
             "mid outdoor":"rightarm1",
             "low indoor":"leftarm1",
-            "high underground":"collectionprow1"
+            "mid underground":"cowcatcher"
         };
         string autumnOptions = visit_url("inv_use.php?" + my_hash() + "&which=3&whichitem=10954");
         int [int] locations;
@@ -1873,7 +1917,13 @@ int NCForceEstimate(){
     if (available_amount($item[McHugeLarge left ski]) > 0)
         force += max(0, 3 - to_int(get_property("_mcHugeLargeAvalancheUses")));
     if (available_amount($item[Cincho de Mayo]) > 0)
-        force += min(3, 1 + max(0, total_free_rests() - to_int(get_property("timesRested"))) / 2);
+        // 100 cinch a day, 60 per Fiesta Exit, and a free rest loosens 30 for
+        // the first five. _cinchUsed is what has already gone, which the old
+        // 1 + rests/2 ignored while also coming out a cast low at odd rest
+        // counts. The taper past five rests stays out: three casts need 180
+        // cinch, which is inside the first few rests, and min caps it there.
+        force += min(3, (100 - to_int(get_property("_cinchUsed"))
+            + 30 * max(0, total_free_rests() - to_int(get_property("timesRested")))) / 60);
     if (available_amount($item[Jurassic Parka]) > 0)
         force += max(0, 5 - to_int(get_property("_spikolodonSpikeUses")));
     return force;
@@ -1938,14 +1988,14 @@ void NCforce() {
         } else if (available_amount($item[Cincho de Mayo]) > 0
             && (get_property("_cinchUsed").to_int() <= 40
                 || get_property("timesRested").to_int() < total_free_rests())){
+            // The helmet sweetens the rest but is optional; equipping it
+            // unowned hard-errors. Resting does not take it off, so it goes on
+            // once rather than on every pass of the loop.
+            if (available_amount($item[Apriling band helmet]) > 0)
+                cli_execute("unequip hat; equip apriling band helmet");
             while (get_property("_cinchUsed").to_int() > 40
-                && get_property("timesRested").to_int() < total_free_rests()) {
-                // The helmet sweetens the rest but is optional; equipping it
-                // unowned hard-errors.
-                if (available_amount($item[Apriling band helmet]) > 0)
-                    cli_execute("unequip hat; equip apriling band helmet");
+                && get_property("timesRested").to_int() < total_free_rests())
                 cli_execute("camp rest free");
-            }
             if (get_property("_cinchUsed").to_int() <= 40) {
                 equip($slot[acc3], $item[cincho de mayo]);
                 use_skill($skill[Cincho: Fiesta Exit]);
@@ -2061,11 +2111,11 @@ boolean banisherFree(string banisher, location loc) {
 
 // Returns true if the given banisher has been used on a monster at your current location
 boolean banishUsedAtYourLocation(string banisher) {
-    foreach num in monster_found_in(banished(banisher)) {
-        if (monster_found_in(banished(banisher))[num] == my_location())
-            return true;
-    }
-    return false;
+    // Asked of up to seven banishers per combat round, so it looks the monster
+    // up in this location rather than through monster_found_in(), which walks
+    // every location in the game -- and was called again inside its own loop.
+    monster used = banished(banisher);
+    return used != $monster[none] && my_location().get_location_monsters() contains used;
 }
 
 // Equips the appropriate banish gear for a location (that hasn't been used yet) and sets the slot override property.
@@ -2518,11 +2568,11 @@ void pullChecklist() {
             && $items[pro skateboard, software glitch] contains it)
             continue;
         // Never auto-bought (see the pull loop) -- flag it as a nice-to-have.
-        if (it == $item[Congressional Medal of Insanity] && storage_amount(it) == 0 && get_inventory()[it] == 0) {
+        if (it == $item[Congressional Medal of Insanity] && storage_amount(it) == 0 && item_amount(it) == 0) {
             print("✗ " + it + " — Currently not optional, just too expensive to have the script buy on its own", "red");
             continue;
         }
-        if (storage_amount(it) > 0 || get_inventory()[it] > 0)
+        if (storage_amount(it) > 0 || item_amount(it) > 0)
             print("✓ " + it, "blue");
         else if (is_tradeable(it))
             print("✗ " + it + " — will be mall-bought if the route needs it", "red");

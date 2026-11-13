@@ -103,8 +103,14 @@ void free_run_any(string ptext, boolean banish) {
         if (item_amount(freecombat) == 0) continue;
         if (!banish && $items[anchor bomb, stuffed yam stinkbomb,
             handful of split pea soup] contains freecombat) continue;
+        // _navelRunaways is the shared daily free-runaway counter -- the navel
+        // ring and the Greatest American Pants spend it too -- and only the
+        // first three a day are free. parasolUsed is the parasol's durability,
+        // which runs to 10 and survives rollover, so reading it as a daily cap
+        // abandoned seven working uses. Same counters freeSources uses.
         if (freecombat == $item[peppermint parasol]
-            && to_int(get_property("parasolUsed")) >= 3) continue;
+            && (to_int(get_property("_navelRunaways")) >= 3
+                || to_int(get_property("parasolUsed")) >= 10)) continue;
         if (freecombat == $item[mer-kin pinkslip]
             && last_monster().phylum != $phylum[mer-kin]) continue;
         if (current_round() == 0) return;
@@ -570,7 +576,12 @@ void main(int round, monster mob, string page_text) {
                 }
             }
             if (last_monster() == $monster[unholy diver]){
-                if (get_property("beGregariousCharges").to_int() > 0 && get_property("beGregariousMonster") != "745")
+                // beGregariousMonster holds a monster name, not an id, so an
+                // id test never fires. Copies pending is the thing to check:
+                // a cast while any are left resets the count to 3 and spends
+                // another charge for nothing.
+                if (get_property("beGregariousCharges").to_int() > 0
+                    && get_property("beGregariousFightsLeft").to_int() == 0)
                     use_skill($skill[Be Gregarious]);
                 if (my_familiar() == $familiar[Melodramedary])
                     use_skill($skill[%fn, spit on them!]);

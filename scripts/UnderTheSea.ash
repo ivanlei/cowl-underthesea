@@ -2307,8 +2307,7 @@ string DropsItems;
                         }
                     }
                 }
-                if (available_amount($item[mer-kin prayerbeads]) < 3 && pulledToday($item[mer-kin prayerbeads]))
-                    pullSequence($item[mer-kin prayerbeads]);
+                pullPrayerbead();
 
                 // Equip as many prayerbeads as available, pull healing items for gaps
                 if (YogHealingsNeeded[available_amount($item[mer-kin prayerbeads])] - YogHealingsOwned() > pulls_remaining( )){

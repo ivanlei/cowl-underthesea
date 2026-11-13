@@ -219,7 +219,12 @@ item yogDeleveler(){
     // Null Afternoon zeroes enemy Attack and Defense; mafia's monster stats do not show it.
     if (have_effect($effect[null afternoon]) > 0)
         return $item[none];
-    if (my_basestat($stat[moxie]) + 10 > monster_attack( ) && my_basestat($stat[muscle]) - 30 > monster_defense( ))
+    // Buffed rather than base: dodging a hit and landing one go by the stats as
+    // modified, and the outfit for this fight maximizes moxie. Read as base, a
+    // class carrying most of its moxie on gear looks like it still needs a
+    // deleveler when it does not -- and each item type is good for only one
+    // throw a fight, so a throw spent on a gap that is already closed is gone.
+    if (my_buffedstat($stat[moxie]) + 10 > monster_attack( ) && my_buffedstat($stat[muscle]) - 30 > monster_defense( ))
         return $item[none];
     foreach it in $items[Mer-kin mouthsoap,crayon shavings,table tennis ball,sea lasso,sea cowbell]{
         if (item_amount(it) > 0 && !itemUsedThisCombat(it))
@@ -1081,7 +1086,7 @@ void main(int round, monster mob, string page_text) {
                     for i from 1 to 4
                         throw_items($item[crayon shavings], $item[crayon shavings]);
                 } else {
-                    while (delevelers() > 0 && (my_basestat($stat[moxie]) + 10 < monster_attack( ) || my_basestat($stat[muscle]) - 30 < monster_defense( ))){
+                    while (delevelers() > 0 && (my_buffedstat($stat[moxie]) + 10 < monster_attack( ) || my_buffedstat($stat[muscle]) - 30 < monster_defense( ))){
                         foreach _, pair in candidates {
                             if (item_amount(pair.a) > 0 && item_amount(pair.b) > 0) {
                                 if (pair.a == pair.b && (item_amount(pair.a) < 2 || pair.b == $item[sea lasso]))

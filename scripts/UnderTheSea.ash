@@ -918,7 +918,7 @@ string DropsItems;
         mapMonster($location[The Coral Corral]);
         adv($location[The Coral Corral]);
         timeSpinnerRefight($location[The Coral Corral]);
-        if (contains_text(get_property("baseballTeam"),"775") && baseballPlayers() == 9 && item_amount($item[sea cowbell]) <3)
+        if (idInList(get_property("baseballTeam"), 775) && baseballPlayers() == 9 && item_amount($item[sea cowbell]) <3)
             baseballD();
     }
 
@@ -1028,7 +1028,7 @@ string DropsItems;
     }
 
     boolean summon(monster mon){
-        if (available_amount($item[Combat lover's locket]) > 0 && haveLocketMonster[mon] && !contains_text(get_property("_locketMonstersFought"),to_int(mon)) && count_substring(get_property("_locketMonstersFought"),",") < 2) {
+        if (available_amount($item[Combat lover's locket]) > 0 && haveLocketMonster[mon] && !idInList(get_property("_locketMonstersFought"), to_int(mon)) && count_substring(get_property("_locketMonstersFought"),",") < 2) {
             cli_execute("reminisce " + mon);
         } else {
             if (available_amount($item[Combat lover's locket]) > 0)
@@ -1037,7 +1037,7 @@ string DropsItems;
                 use($item[photocopied monster]);
                 run_combat();
             } else if ($familiar[chest mimic].experience > 200) {
-                if (!contains_text(get_property("mimicEggMonsters"),to_int(mon)))
+                if (!idInList(get_property("mimicEggMonsters"), to_int(mon)))
                     cli_execute("c2t_megg extract " + mon);
                 if (item_amount($item[mimic egg]) == 0)
                     abort("mimice egg failed to extract. Rerun and if this happens again ping FS");
@@ -1401,7 +1401,7 @@ string DropsItems;
 
             if (my_path().id == 55){
                 //Waste baseball if you don't have steely eyed squint and not a lot of NCforces since you may need to save the pull for a pearl necklace
-                if (!have_skill($skill[Steely-Eyed Squint]) && NCForceEstimate() < 4 && contains_text(get_property("baseballTeam"),"773") && baseballPlayers() == 9)
+                if (!have_skill($skill[Steely-Eyed Squint]) && NCForceEstimate() < 4 && idInList(get_property("baseballTeam"), 773) && baseballPlayers() == 9)
                     baseballD();
                 
                 //If you can't do caliginous abyss in cyberrealm, then BoFa them into outpost
@@ -1496,7 +1496,7 @@ string DropsItems;
     void unholyDiver(string str){
         step("phase: rusty rivets");
         while (!diverPartsComplete() && to_slot(divingHelmet()) != $slot[hat]) {
-            if (baseballPlayers() >= 9 && contains_text(get_property("baseballTeam"),"745"))
+            if (baseballPlayers() >= 9 && idInList(get_property("baseballTeam"), 745))
                 baseballD();
             switch (str) {
                 case "summon":
@@ -1521,7 +1521,7 @@ string DropsItems;
                                 yellowRayPrep();
                             }
                             if (item_amount($item[mimic egg]) > 0
-                                && contains_text(get_property("mimicEggMonsters"), "745")){
+                                && idInList(get_property("mimicEggMonsters"), 745)){
                                 cli_execute("c2t_megg fight unholy diver");
                                 run_combat();
                                 if (handling_choice() && last_choice() == 1387)
@@ -1535,10 +1535,10 @@ string DropsItems;
                             } else {
                                 break;
                             }
-                            if (baseballPlayers() >= 9 && contains_text(get_property("baseballTeam"),"745"))
+                            if (baseballPlayers() >= 9 && idInList(get_property("baseballTeam"), 745))
                                 baseballD();
                         }
-                        if (baseballPlayers() >= 9 && contains_text(get_property("baseballTeam"),"745"))
+                        if (baseballPlayers() >= 9 && idInList(get_property("baseballTeam"), 745))
                             baseballD();
                         while (item_amount($item[rusty rivet]) > 5 && item_amount($item[rusty rivet]) < 8 && get_property("_monkeyPawWishesUsed").to_int() < 5 && have_item($item[cursed monkey's paw]))
                             cli_execute("monkeypaw wish rusty rivet");
@@ -2052,7 +2052,7 @@ string DropsItems;
                             conditional += "monodent of the sea,";
                         if (to_int(get_property("_clubEmBattlefieldUsed")) < 5)
                             conditional += if_equip($item[legendary seal-clubbing club]);
-                        else if (baseballPlayers() < 9 || !contains_text(get_property("baseballTeam"),"838"))
+                        else if (baseballPlayers() < 9 || !idInList(get_property("baseballTeam"), 838))
                             conditional += if_equip($item[baseball diamond]);
                         tempEquipment("-combat,sea", "crappy Mer-kin tailpiece,crappy Mer-kin mask,"
                             + if_equip($item[blood cubic zirconia]) + bathysphere($item[toy cupid bow])
@@ -2065,7 +2065,7 @@ string DropsItems;
 
                     // Get mer-kin bunwig if missing
                     while (available_amount($item[mer-kin bunwig]) == 0 && !libraryReady()) {
-                        if (contains_text(get_property("baseballTeam"),"773") && baseballPlayers() == 9){
+                        if (idInList(get_property("baseballTeam"), 773) && baseballPlayers() == 9){
                             baseballD();
                             continue;
                         }
@@ -2119,7 +2119,7 @@ string DropsItems;
                     while (get_property("merkinElementaryTeacherUnlock") == "false") {
                         put_closet(item_amount($item[mer-kin hallpass]), $item[mer-kin hallpass]);
                         string conditional;
-                        if (baseballPlayers() < 9 || !contains_text(get_property("baseballTeam"),"838"))
+                        if (baseballPlayers() < 9 || !idInList(get_property("baseballTeam"), 838))
                             conditional += if_equip($item[baseball diamond]);
                         use_familiar("-combat");
                         tempEquipment("-combat,sea", "monodent of the sea,crappy Mer-kin tailpiece,crappy Mer-kin mask," + if_equip($item[blood cubic zirconia])

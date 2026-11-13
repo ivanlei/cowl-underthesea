@@ -1,0 +1,20 @@
+# What check.py found when it landed, so that a red build means something new.
+#
+# Each line is a finding it still reports and nobody is fixing today. Delete a
+# line when the thing is fixed; the check will catch it coming back, because
+# coming back is a finding that is no longer listed here.
+#
+# The four dread-card guards and choice 312 are open questions rather than
+# settled bugs -- the dread block is write-only bookkeeping whose reset policy
+# nobody has decided, and mafia's own source says "Choice 312 is unknown", so
+# its options are not documented anywhere to answer it from. The two descending
+# loops are deliberate; both say so in a comment beside them.
+#
+# Regenerate with: python3 .github/check.py --baseline > .github/check-baseline.txt
+UnderTheSeaGlobals.ash: for ... from 8 to 6 counts DOWN -- confirm that is meant
+UnderTheSeaGlobals.ash: for ... from 9 to 3 counts DOWN -- confirm that is meant
+UnderTheSea_Choice.ash: choice 312: every answer is inside a branch -- confirm some path always answers
+UnderTheSea_Choice.ash: catalogChecked == "false" is always FALSE -- (undefined, so ""), and nothing writes "false"
+UnderTheSea_Choice.ash: DS1 == "false" is always FALSE -- (undefined, so ""), and nothing writes "false"
+UnderTheSea_Choice.ash: DS6 == "false" is always FALSE -- (undefined, so ""), and nothing writes "false"
+UnderTheSea_Choice.ash: DS8 == "false" is always FALSE -- (undefined, so ""), and nothing writes "false"

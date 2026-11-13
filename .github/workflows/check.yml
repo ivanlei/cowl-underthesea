@@ -1,7 +1,8 @@
 # The checks described in .github/check.py, on every push and pull request.
 #
 # KoLmafia's data files are fetched rather than vendored: defaults.txt says what
-# an unset preference reads as, and monsters.txt and items.txt say what an id is.
+# an unset preference reads as, monsters.txt and items.txt say what an id is, and
+# dailylimits.txt says what a daily cap is.
 # Copying them in would be three more numbers to keep in step, and tracking
 # mafia's main is the point -- when KoL changes something and mafia follows, this
 # is where we hear about it.
@@ -18,7 +19,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/mafia-data"
           base=https://raw.githubusercontent.com/kolmafia/kolmafia/main/src/main/resources/data
-          for f in defaults.txt monsters.txt items.txt; do
+          for f in defaults.txt monsters.txt items.txt dailylimits.txt; do
             curl -fsSL "$base/$f" -o "$RUNNER_TEMP/mafia-data/$f"
           done
 

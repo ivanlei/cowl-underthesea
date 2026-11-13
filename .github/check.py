@@ -226,11 +226,59 @@ def check_choice_fallthrough():
             fail(f"{f}:~{n}", f"choice {c.group(1)}: every answer is inside a branch -- confirm some path always answers")
 
 
+# ------------------------------------------- a cap against mafia's own limit
+#
+# Every daily cap in here is a number somebody read off the game once. mafia
+# keeps the same numbers in dailylimits.txt and updates them when KoL changes
+# one, so a cap that has drifted is worth hearing about before a run spends a
+# charge that is not there or stops short of one that is.
+#
+# ONLY THE freeSources TABLE, which declares its cap in a field called cap. The
+# caps written as a bare comparison were tried and the check thrown away:
+# almost every number compared against a _counter preference is a phase in the
+# route rather than a claim about the limit. The script casts Monster Habitats
+# while _monsterHabitatsRecalled < 2 and switches to the golem chain at >= 2,
+# keeping the third of mafia's three for elsewhere -- correct, and
+# indistinguishable by shape from an out-of-date cap. That version reported
+# eight of those and nothing else, so it earned its removal. A declaration says
+# what it means; a comparison does not.
+def check_daily_limits(data):
+    path = os.path.join(data, "dailylimits.txt")
+    if not os.path.exists(path):
+        fail("dailylimits.txt", f"not found in {data}")
+        return
+    limits = {}
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            if line.startswith("#") or not line.strip():
+                continue
+            c = line.rstrip("\n").split("\t")
+            if len(c) >= 3 and c[2].strip():
+                n = c[3].strip() if len(c) > 3 and c[3].strip() else "1"
+                if n.isdigit():
+                    limits.setdefault(c[2].strip(), set()).add(int(n))
+
+    for f in ash_files():
+        for n, line in lines_of(f):
+            m = re.search(r'new freeSrc\([^)]*?"(_\w+)"\s*,\s*(\d+)', line)
+            if not m:
+                continue
+            pref, cap = m.group(1), int(m.group(2))
+            # 0 is the table's own "no fixed daily cap", and a preference mafia
+            # does not list has nothing to be compared against.
+            if not cap or pref not in limits:
+                continue
+            if cap not in limits[pref]:
+                fail(f"{f}:{n}", f"freeSources caps {pref} at {cap}; mafia says "
+                                 + "/".join(str(x) for x in sorted(limits[pref])))
+
+
 # WHERE MAFIA'S DATA FILES ARE.
 #
-# Three checks read them, and they are not in this repository: defaults.txt
-# says what an unset preference reads as, monsters.txt and items.txt say what
-# an id is. Taking them from mafia rather than copying them here is the point --
+# Four checks read them, and they are not in this repository: defaults.txt
+# says what an unset preference reads as, monsters.txt and items.txt say what an
+# id is, and dailylimits.txt says what a daily cap is. Taking them from mafia
+# rather than copying them here is the point --
 # a copy would be another number to keep in step.
 #
 # --data <dir> is a flat directory of the .txt files, which is what CI builds.
@@ -281,11 +329,13 @@ def main():
     check_traps()
     check_choice_fallthrough()
     if data is None:
-        print("note: no KoLmafia data found, so the preference-default and id/comment")
-        print("      checks did not run. Pass --mafia <checkout> or --data <dir>.")
+        print("note: no KoLmafia data found, so the preference-default, id/comment")
+        print("      and daily-cap checks did not run. Pass --mafia <checkout> or")
+        print("      --data <dir>.")
     else:
         check_pref_defaults(data)
         check_id_comments(data)
+        check_daily_limits(data)
     known = baseline()
     fresh, old = [], []
     for where, msg in problems:

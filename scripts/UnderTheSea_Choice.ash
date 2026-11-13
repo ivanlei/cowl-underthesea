@@ -214,7 +214,9 @@ void main(int whichchoice, string page) {
             }
             break;
         case 1059:
-            if (get_property("choiceAdventure1059") == "")
+            // mafia defaults choiceAdventure1059 to 0 rather than empty, so this
+            // never answered and the choice fell through to manual control.
+            if (to_int(get_property("choiceAdventure1059")) == 0)
                 run_choice(1);
             break;
 

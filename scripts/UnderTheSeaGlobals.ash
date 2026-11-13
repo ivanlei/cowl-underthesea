@@ -786,6 +786,51 @@ import <seedfinder/seedfinder.ash>;
         return n;
     }
 
+    // Where the delevelers on hand would leave Yog-Urt, thrown in the order
+    // yogDeleveler() picks them -- the list's own order, which is not the order
+    // that would remove the most. One throw per item type a fight, so which
+    // types are held is what counts and not how many of each.
+    //
+    // The mouthsoap and the cowbell are flat and spaded; the crayon shavings
+    // take a share of whatever is left. The table tennis ball and the sea lasso
+    // delevel too, by amounts nobody has spaded, so they are counted for
+    // nothing: farming one item too many costs turns, walking in one short
+    // costs the fight.
+    record yogDelevel { int atk; int def; };
+
+    yogDelevel yogAfterDelevelers() {
+        monster yog = $monster[Yog-Urt, Elder Goddess of Hatred];
+        yogDelevel left = new yogDelevel(monster_attack(yog), monster_defense(yog));
+        foreach it in $items[Mer-kin mouthsoap,crayon shavings,table tennis ball,sea lasso,sea cowbell] {
+            if (item_amount(it) == 0)
+                continue;
+            if (it == $item[Mer-kin mouthsoap]) {
+                left.atk -= 250;
+                left.def -= 250;
+            } else if (it == $item[sea cowbell]) {
+                left.atk -= 164;
+                left.def -= 154;
+            } else if (it == $item[crayon shavings]) {
+                left.atk -= left.atk * 30 / 100;
+                left.def -= left.def * 30 / 100;
+            }
+        }
+        left.atk = max(0, left.atk);
+        left.def = max(0, left.def);
+        return left;
+    }
+
+    // Enough for this character, rather than a number of items: the same test
+    // yogDeleveler() applies in the fight, so the prep stops farming where the
+    // fight stops asking. It reads whatever is worn at the time, so during
+    // farming it comes out low and errs toward one item too many; the check
+    // after the fight's own outfit goes on is the one that decides.
+    boolean yogDelevelersEnough() {
+        yogDelevel left = yogAfterDelevelers();
+        return my_buffedstat($stat[moxie]) + 10 > left.atk
+            && my_buffedstat($stat[muscle]) - 30 > left.def;
+    }
+
     void eatSushi(){
         string [item] sushi_map = {
             $item[beefy fish meat]:	        "beefy nigiri",

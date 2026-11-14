@@ -647,13 +647,65 @@ import <seedfinder/seedfinder.ash>;
     //
     // $monsters[...] is a SET, so this takes one name: a second would bind
     // `true`. get_monsters() returns a map and is the other way round.
+    // LATCHED ONE WAY, and that is not tidiness. killGear() below is safe
+    // unlatched -- an accessory carrying Mysticality and spell damage does not
+    // change what hits you -- but survivalBuffs() is not: absorption and
+    // resistance are exactly what expected_damage() reads, so an unlatched test
+    // goes false the moment the buffs are up, stops maintaining them, and comes
+    // back true five turns later when they lapse. Buffed half the time, and
+    // unbuffed in precisely the fights that land in the gap. On the logged run
+    // the flip is not marginal: 394 a round becomes about 236 buffed, and three
+    // rounds of that fits inside 800 HP where three rounds of 394 does not.
+    //
+    // So once a run has found itself fragile it stays fragile for the day, and
+    // nothing here ever latches the other way. A character that stops being
+    // fragile mid-run keeps paying an accessory slot and 20 MP every five
+    // turns, which is the cheaper mistake of the two.
     boolean fragileForTheSea() {
+        if (prefOn("_utsSeaFragile"))
+            return true;
         int worst;
         foreach mob in $monsters[Mer-kin raider, sea cowboy, unholy diver, Mer-kin specter] {
             if (expected_damage(mob) > worst)
                 worst = expected_damage(mob);
         }
-        return cannotTakeThreeRounds(worst, my_maxhp());
+        if (!cannotTakeThreeRounds(worst, my_maxhp()))
+            return false;
+        set_property("_utsSeaFragile", "true");
+        return true;
+    }
+
+    // Damage absorption and elemental resistance for the ordinary fights, which
+    // is the one place this script never asked for any. mood() casts these two
+    // only in its resistance cases, and those fire for Deep Dark Visions and
+    // boss prep -- so a logged run that lost 13 fights had Astral Shell up
+    // three times and Elemental Saucesphere twice in a whole day, with one
+    // permed and the other bought from the guild in that same run.
+    //
+    // WHAT THEY ARE WORTH, by mafia's own expected_damage model. Astral Shell
+    // is +80 damage absorption, and the absorption multiplier is
+    // 1 - (sqrt(DA/10) - 1)/10, so it takes 14 to 26% off the physical side
+    // depending on what is already worn. The resistances are the bigger half
+    // and do not look it: a level is 10% below five, so Astral Shell's +1 and
+    // Saucesphere's +2 together are 30% off everything these monsters throw --
+    // the Mer-kin raider attacks with sleaze, the rustler with hot, the sea cow
+    // with stench, and the specter with all five. Together that is close to
+    // halving what a raider lands.
+    //
+    // Gated on the same fragility test as killGear() and for the same reason:
+    // 20 MP every five turns is nothing against a lost fight and pure waste on
+    // a character that was never in danger. The scroll of minor invulnerability
+    // the resistance cases also reach for is deliberately not here -- burning a
+    // consumable every five turns for a whole run is a different trade.
+    void survivalBuffs() {
+        if (!fragileForTheSea())
+            return;
+        foreach ef in $effects[Astral Shell, Elemental Saucesphere, Scarysauce] {
+            if (to_skill(ef) != $skill[none] && !have_skill(to_skill(ef)))
+                continue;
+            if (have_effect(ef) == 0)
+                cli_execute(ef.default);
+        }
     }
 
     // Forced by name rather than added to the objective on purpose: a forced

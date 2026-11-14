@@ -49,6 +49,29 @@ void ck(boolean got, boolean want, string what) {
 }
 
 void main() {
+    // ── a preference that is a yes or a no ──────────────────────────────────
+    //
+    // The point of the helpers is that the four spellings they replace do not
+    // all agree, and the disagreement is exactly at the unset value: 120 call
+    // sites now lean on prefOff being TRUE there, where the `== "false"` many
+    // of them were written as is FALSE.
+    string keepBool = get_property("uts_traceSelfTest");
+    set_property("uts_traceSelfTest", "");
+    ck(prefOn("uts_traceSelfTest"), false, "unset is not on");
+    ck(prefOff("uts_traceSelfTest"), true, "unset IS off -- the whole point");
+    set_property("uts_traceSelfTest", "true");
+    ck(prefOn("uts_traceSelfTest"), true, "true is on");
+    ck(prefOff("uts_traceSelfTest"), false, "true is not off");
+    set_property("uts_traceSelfTest", "false");
+    ck(prefOn("uts_traceSelfTest"), false, "false is not on");
+    ck(prefOff("uts_traceSelfTest"), true, "false is off");
+    // Anything that is not "true" is not a yes, which is what keeps a
+    // preference holding a third value from reading as one.
+    set_property("uts_traceSelfTest", "unready");
+    ck(prefOn("uts_traceSelfTest"), false, "some other value is not on");
+    ck(prefOff("uts_traceSelfTest"), true, "some other value is off");
+    set_property("uts_traceSelfTest", keepBool);
+
     string keepLevel = get_property("uts_trace");
     string keepPhase = get_property("_uts_phase");
 

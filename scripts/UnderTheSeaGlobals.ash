@@ -1,6 +1,38 @@
 since r29402;
 import <seedfinder/seedfinder.ash>;
 
+// ─── A PREFERENCE THAT IS A YES OR A NO ─────────────────────────────────────
+//
+// WHY A HELPER AND NOT THE COMPARISON. There were four spellings of this across
+// the scripts -- == "true" 31 times, != "true" 28, == "false" 54, != "false" 2
+// -- and two of them do not mean the same thing. An unset preference reads as
+// whatever defaults.txt says it does, and for a preference KoLmafia has never
+// heard of that is the empty string. `== "false"` is then FALSE where
+// `!= "true"` is TRUE, so a guard written the first way never fires at all.
+//
+// That is not a hypothesis. .github/check-baseline.txt carries four of them:
+// catalogChecked, DS1, DS6 and DS8, each "always FALSE -- (undefined, so
+// \"\"), and nothing writes false".
+//
+// WHAT THESE DO NOT COVER, deliberately:
+//
+//   A preference with more than two states. _utsScreechFired holds "", "true",
+//   "false" and "unready", so == "false" there is one of four answers rather
+//   than a no, and reads as itself.
+//
+//   An opt-out, where unset means ON. uts_allocLive != "false" is the whole of
+//   how that switch is turned off; prefOn would make its default off and quietly
+//   disable the three things it gates.
+//
+// .github/check.py keeps a fifth spelling from appearing.
+    boolean prefOn(string name) {
+        return get_property(name) == "true";
+    }
+
+    boolean prefOff(string name) {
+        return !prefOn(name);
+    }
+
 // ─── SAYING WHERE THE RUN IS ────────────────────────────────────────────────
 //
 // WHAT THIS IS FOR. COwliCK: "when it aborts for some reason, it's super hard
@@ -350,7 +382,7 @@ import <seedfinder/seedfinder.ash>;
 
     int count_summons(){
         int n;
-        if (get_property("_photocopyUsed") == "false" && have_item($item[Clan VIP Lounge key]))
+        if (prefOff("_photocopyUsed") && have_item($item[Clan VIP Lounge key]))
             n += 1;
         if (available_amount($item[combat lover's locket]) > 0)
             n += 3 - locketFightsUsed();
@@ -438,7 +470,7 @@ import <seedfinder/seedfinder.ash>;
             n += 1;
         if (!lowShiny() && have_effect($effect[Jelly Combed]) == 0 && available_amount($item[comb jelly]) == 0 && !pulledToday($item[comb jelly]))
             n += 1;
-        if (get_property("shubJigguwattDefeated") == "false" && item_amount($item[crayon shavings]) < 4
+        if (prefOff("shubJigguwattDefeated") && item_amount($item[crayon shavings]) < 4
             && item_amount($item[null-day exploit]) == 0 && !pulledToday($item[null-day exploit]))
             n += 1;
         return n;
@@ -493,17 +525,17 @@ import <seedfinder/seedfinder.ash>;
             return;
         uts_why("getting Lucky!",
             "aug 2nd " + (have_skill($skill[Aug. 2nd: Find an Eleven-Leaf Clover Day])
-                    && get_property("_aug2Cast") == "false" ? "available" : "no")
+                    && prefOff("_aug2Cast") ? "available" : "no")
                 + ", heartstone " + (available_amount($item[heartstone]) > 0 ? "held" : "no")
                 + ", clovers bought " + get_property("_cloversPurchased"));
         if (have_skill($skill[Aug. 2nd: Find an Eleven-Leaf Clover Day])
-            && get_property("_aug2Cast") == "false"
+            && prefOff("_aug2Cast")
             && to_int(get_property("_augSkillsCast")) < 5) {
             use_skill($skill[Aug. 2nd: Find an Eleven-Leaf Clover Day]);
             if (have_effect($effect[Lucky!]) > 0)
                 return;
         }
-        if (available_amount($item[heartstone]) > 0 && get_property("heartstoneLuckUnlocked") == true && get_property("_heartstoneLuckUsed") == false) {
+        if (available_amount($item[heartstone]) > 0 && prefOn("heartstoneLuckUnlocked") && prefOff("_heartstoneLuckUsed")) {
             use_skill($skill[Heartstone: %luck]);
             if (have_effect($effect[Lucky!]) > 0)
                 return;
@@ -743,7 +775,7 @@ import <seedfinder/seedfinder.ash>;
         if (available_amount($item[black glass]) == 0)
             n += 13;
         // Against "true" so an unread preference reserves rather than releases.
-        if (get_property("dampOldBootPurchased") != "true")
+        if (prefOff("dampOldBootPurchased"))
             n += 50;
         // Bootstraps smith into the teflon swim fins, a tailpiece option.
         if (tailpiece() == $item[none]
@@ -813,9 +845,9 @@ import <seedfinder/seedfinder.ash>;
             return if_equip($item[spring shoes]);
         if (available_amount($item[greatest american pants]) > 0 && (get_property("_navelRunaways").to_int() < 3 || (get_property("_navelRunaways").to_int() < 10 && highShiny())) && have_effect($effect[driving waterproofly]) > 0)
             return if_equip($item[greatest american pants]);
-        if (available_amount($item[V for vivala mask]) > 0 && get_property("_vmaskBanisherUsed") == false)
+        if (available_amount($item[V for vivala mask]) > 0 && prefOff("_vmaskBanisherUsed"))
             return if_equip($item[V for vivala mask]);
-        if (available_amount($item[latte lovers member's mug]) > 0 && get_property("_latteBanishUsed") == false)
+        if (available_amount($item[latte lovers member's mug]) > 0 && prefOff("_latteBanishUsed"))
             return if_equip($item[latte lovers member's mug]);
         // Without Waterproofly the bathysphere's weight loss would leave the Boots unable to run.
         if (have_familiar($familiar[Pair of Stomping Boots]) && have_effect($effect[Driving Waterproofly]) > 0
@@ -1388,7 +1420,7 @@ boolean acorndionWorn() {
 // One Outpost fight in the Acorndion plants a Refrain, so sea cows join the delay pool.
 boolean acornOutpostWanted() {
     return my_path().id == 55
-        && get_property("uts_acornOutpost") == "true"
+        && prefOn("uts_acornOutpost")
         && available_amount($item[legendary acorndion]) > 0
         && (get_property("_utsAcornOutpost") == "" || get_property("_utsAcornOutpost") == "dressed")
         && seaCowNeeded()
@@ -1446,7 +1478,7 @@ boolean outpostFarmsScales() {
 
 // After the Refrain, Outpost fights stay in the Acorndion until each target has met one Chiasso.
 boolean acornBanishWanted() {
-    if (my_path().id != 55 || get_property("uts_acornOutpost") != "true"
+    if (my_path().id != 55 || prefOff("uts_acornOutpost")
         || available_amount($item[legendary acorndion]) == 0
         || get_property("_utsAcornOutpost") != "planted"
         || contains_text(get_property("_utsAcornBanished"), "stop")
@@ -1625,7 +1657,7 @@ boolean seaCowForce(monster mob, string page_text) {
         return false;
     if (forcesAfterHealer() <= 0)
         return false;
-    if (have_equipped($item[pro skateboard]) && get_property("_epicMcTwistUsed") == "false")
+    if (have_equipped($item[pro skateboard]) && prefOff("_epicMcTwistUsed"))
         return false;
     if ($location[the coral corral].turns_spent <= 1
         && item_amount($item[sea leather]) == 0
@@ -1739,7 +1771,7 @@ void duplicateMonster(monster mob, string page_text) {
 void pillKeeper(string pill) {
     if (available_amount($item[Eight Days a Week Pill Keeper]) == 0)
         return;
-    if (get_property("_freePillKeeperUsed") != "false")
+    if (prefOn("_freePillKeeperUsed"))
         return;
     step("Pill keeper: " + pill);
     cli_execute("pillkeeper " + pill);
@@ -1797,7 +1829,7 @@ void becomeBat(string page_text) {
 boolean mapReady() {
     return have_skill($skill[Map the Monsters])
         && get_property("_monstersMapped").to_int() < 3
-        && get_property("mappingMonsters") == "false";
+        && prefOff("mappingMonsters");
 }
 
 // Only cast once the Peridot's charge for this zone is gone, so the two do not
@@ -2201,7 +2233,7 @@ void briefcase() {
     // An unopened case has no tabs to read, so asking for a buff would only
     // burn clicks. Opening it is a two-day job and not something a run should
     // be spending its budget on.
-    if (get_property("_kgbOpened") == "false")
+    if (prefOff("_kgbOpened"))
         return;
     if (get_property("_kgbClicksUsed").to_int() >= 22)
         return;
@@ -2213,7 +2245,7 @@ void briefcase() {
 // remains.
 
 void NCforce() {
-    if (get_property("noncombatForcerActive") != "true") {
+    if (prefOff("noncombatForcerActive")) {
         if (available_amount($item[apriling band helmet]) > 0 && get_property("_aprilBandTubaUses").to_int() < 3 && have_item($item[Apriling band tuba])) {
             cli_execute("aprilband play tuba");
         // Enter the Cincho branch only if it can actually fire -- either
@@ -2234,7 +2266,7 @@ void NCforce() {
                 use_skill($skill[Cincho: Fiesta Exit]);
             }
         } else if (available_amount($item[Eight Days a Week Pill Keeper]) > 0
-            && get_property("_freePillKeeperUsed") == "false") {
+            && prefOff("_freePillKeeperUsed")) {
             // Sneakisol has Clara's bell's noncombat-forcing behaviour and is
             // free, so it comes before anything that costs a pull. If the free
             // pill already went on Fidoxene this call is a no-op.
@@ -2282,9 +2314,9 @@ void useMapIfAvailable() {
     if (highShiny()) return;
     if (!have_equipped($item[backup camera])) return;
     if (free_monster(get_property("lastCopyableMonster").to_monster())) return;
-    if (get_property("_mapToACandyRichBlockUsed") == "false" && item_amount($item[map to a candy-rich block]) > 0) 
+    if (prefOff("_mapToACandyRichBlockUsed") && item_amount($item[map to a candy-rich block]) > 0) 
         use($item[map to a candy-rich block]);
-    if (get_property("_mapToACandyRichBlockUsed") == "true")
+    if (prefOn("_mapToACandyRichBlockUsed"))
         candy("fight");
 }
 
@@ -2356,7 +2388,7 @@ boolean banishUsedAtYourLocation(string banisher) {
 item banishGear(location loc) {
     item it;
     foreach ite in $items[spring shoes, monodent of the sea, Heartstone] {
-        if (ite == $item[Heartstone] && get_property("heartstoneBanishUnlocked") == "false")
+        if (ite == $item[Heartstone] && prefOff("heartstoneBanishUnlocked"))
             continue;
         if (banisherFree(banMap[ite].pref, loc) && available_amount(ite) > 0) {
             it = ite;
@@ -2376,7 +2408,7 @@ item banishGear(location loc) {
 // whose target is no longer appearing at your location
 skill combatBan() {
     foreach ite in $items[spring shoes, monodent of the sea, Heartstone] {
-        if (ite == $item[Heartstone] && get_property("heartstoneBanishUnlocked") == "false")
+        if (ite == $item[Heartstone] && prefOff("heartstoneBanishUnlocked"))
             continue;
         if (have_equipped(ite)
             && banisherFree(banMap[ite].pref, my_location())) {
@@ -2601,7 +2633,7 @@ void baseballD() {
 void censer() {
     if (!have_item($item[Sept-Ember Censer]))
         return;
-    if (get_property("_septEmberBalanceChecked") == "false")
+    if (prefOff("_septEmberBalanceChecked"))
         visit_url("shop.php?whichshop=september");
     int wanted = 3 - item_amount($item[Septapus summoning charm]);
     int afford = to_int(get_property("availableSeptEmbers")) / 2;
@@ -3017,9 +3049,9 @@ string corralNeed(monster mob) {
 }
 
 string fightNeedZone(location loc, monster mob) {
-    if (get_property("_utsScreechReaim") == "true")
+    if (prefOn("_utsScreechReaim"))
         return "RUN";
-    if (get_property("_utsPearlFarm") == "true")
+    if (prefOn("_utsPearlFarm"))
         return "KILL_ANY";
     // A McTwist this fight doubles its drops, so the CCS kills it.
     if (mcTwistThisFight())
@@ -3162,7 +3194,7 @@ string freeSrcBase(string entry) {
 
 // The loop in outpost() is still running.
 boolean outpostAhead() {
-    return (item_amount($item[Mer-kin stashbox]) == 0 && get_property("corralUnlocked") == "false")
+    return (item_amount($item[Mer-kin stashbox]) == 0 && prefOff("corralUnlocked"))
         || $strings[step6, step7, step8] contains get_property("questS02Monkees");
 }
 
@@ -3313,7 +3345,7 @@ boolean allocLiveBrickReady(string page_text) {
 boolean allocLiveMobHitReady() {
     return allocLiveOn() && !highShiny() && current_round() > 0 && mcTwistThisFight()
         && !free_monster(last_monster()) && !instakillImmune(last_monster())
-        && get_property("_gingerbreadMobHitUsed") != "true"
+        && prefOff("_gingerbreadMobHitUsed")
         && have_skill($skill[Gingerbread Mob Hit])
         && my_mp() >= mp_cost($skill[Gingerbread Mob Hit]);
 }

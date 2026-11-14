@@ -90,7 +90,7 @@ void main(int whichchoice, string page) {
 
         // ── More complex cases ────────────────────────────────────────────
         case 312:
-            if (get_property("intenseCurrents") == "true"){
+            if (prefOn("intenseCurrents")){
                 utsPick(3);
             }
             break;
@@ -99,7 +99,7 @@ void main(int whichchoice, string page) {
         case 313: int [int] burglar = {0:1, 1:3, 2:2}; stashboxCheck(burglar); break;  // burglar:  1→3→2
         case 314: int [int] raider = {0:1, 1:2, 2:3}; stashboxCheck(raider); break;  // raider:   1→2→3
         case 315:
-            if (get_property("intenseCurrents") == "true"){
+            if (prefOn("intenseCurrents")){
                 if (available_amount($item[mer-kin prayerbeads]) < 3) {
                     utsPick(3);
                 } else if (available_amount($item[mer-kin killscroll]) == 0 && get_property("dreadScroll5") == "0"){
@@ -250,7 +250,7 @@ void main(int whichchoice, string page) {
         case 1500:
             if (have_effect($effect[Shadow Waters]) == 0){
                 utsPick(2);
-            } else if (get_property("_shadowForestLooted") == "false"){
+            } else if (prefOff("_shadowForestLooted")){
                 utsPick(3);
             } else {
                 utsPick(2);

@@ -143,7 +143,7 @@ void mcTwistMobHit(string ptext) {
 
 // BCZ refracted gaze helper — checks stat threshold before casting
 boolean bcz_gaze_ready() {
-    if (get_property("NCtoC") == "true")
+    if (prefOn("NCtoC"))
         return false;
     return (my_basestat($stat[submysticality]) - 40000) > BCZcost("RefractedGazeCasts");
 }
@@ -397,7 +397,7 @@ void main(int round, monster mob, string page_text) {
     // inferring one from banishedPhyla.
     // Cast once only: the screech does not end the fight, and re-submitting a
     // skill KoL has stopped offering is rejected without advancing the round.
-    if (get_property("_utsScreechReaim") == "true") {
+    if (prefOn("_utsScreechReaim")) {
         // THE TWO MODES THAT REDUCE THE WHOLE CCS TO A KILL, said once per
         // fight. Both are postloop flags, and both have been left set by a run
         // that died mid-loop -- at which point every in-run fight quietly
@@ -425,7 +425,7 @@ void main(int round, monster mob, string page_text) {
         cleanUp();
         return;
     }
-    if (get_property("_utsPearlFarm") == "true") {
+    if (prefOn("_utsPearlFarm")) {
         if (round <= 1)
             uts_why("CCS reduced to a kill", "_utsPearlFarm is set (postloop pearl farming)");
         noteScreechReady(page_text);
@@ -545,7 +545,7 @@ void main(int round, monster mob, string page_text) {
 
         case $location[Shadow Rift (The Misspelled Cemetary)]:
             if (my_primestat() == $stat[moxie]) steal();
-            if (get_property("_seadentWaveUsed") == "true"
+            if (prefOn("_seadentWaveUsed")
                 && to_int(get_property("lassoTrainingCount")) < 20
                 && item_amount($item[sea lasso]) > 0)
                 throw_item($item[sea lasso]);
@@ -558,7 +558,7 @@ void main(int round, monster mob, string page_text) {
                 if (have_equipped($item[Flash Liquidizer Ultra Dousing Accessory])) {
                     int lastRound;
                     while (current_round() > lastRound && to_int(get_property("_douseFoeUses")) < 3
-                        && get_property("_douseFoeSuccess") == "false"
+                        && prefOff("_douseFoeSuccess")
                         && current_round() < 25) {
                         lastRound = current_round();
                         use_skill($skill[douse foe]);
@@ -827,7 +827,7 @@ void main(int round, monster mob, string page_text) {
                     cleanUp();
                 }
             }
-            if (get_property("_epicMcTwistUsed") == "false" && have_equipped($item[pro skateboard])) {
+            if (prefOff("_epicMcTwistUsed") && have_equipped($item[pro skateboard])) {
                 if (have_equipped($item[backup camera])) {
                     if (last_monster() == $monster[mer-kin rustler])
                         use_skill($skill[spring kick]);
@@ -890,7 +890,7 @@ void main(int round, monster mob, string page_text) {
                             }
                             free_run(page_text, true);
                             if (last_monster() == $monster[mer-kin rustler]){
-                                if (have_skill($skill[heartstone: %banish]) && get_property("heartstoneBanishUnlocked") == "true"){
+                                if (have_skill($skill[heartstone: %banish]) && prefOn("heartstoneBanishUnlocked")){
                                     use_skill($skill[heartstone: %banish]);
                                 } 
                             } else if (last_monster() == $monster[sea cowboy]){
@@ -943,7 +943,7 @@ void main(int round, monster mob, string page_text) {
                 // once a noncombat has already been forced into a combat.
                 if (have_equipped($item[legendary seal-clubbing club])
                     && to_int(get_property("_clubEmBattlefieldUsed")) < 5
-                    && get_property("NCtoC") != "true")
+                    && prefOff("NCtoC"))
                     use_skill($skill[Club 'Em Across the Battlefield]);
                 cleanUp();
             }
@@ -983,9 +983,9 @@ void main(int round, monster mob, string page_text) {
 
         case $location[Mer-kin Elementary School]:
             if (free_monster(last_monster())) {
-                if (get_property("NCtoC") != "true")
+                if (prefOff("NCtoC"))
                     use_if_have_skill(page_text, $skill[BCZ: Refracted Gaze]);
-                if (have_equipped($item[legendary seal-clubbing club]) && to_int(get_property("_clubEmBattlefieldUsed")) < 5 && get_property("NCtoC") != "true"){
+                if (have_equipped($item[legendary seal-clubbing club]) && to_int(get_property("_clubEmBattlefieldUsed")) < 5 && prefOff("NCtoC")){
                     use_skill($skill[Club 'Em Across the Battlefield]);
                 } else {
                     cleanUp();
@@ -1005,11 +1005,11 @@ void main(int round, monster mob, string page_text) {
                     && to_int(get_property("_backUpUses")) < 11
                     && have_equipped($item[backup camera])) {
                     use_skill($skill[Back-Up to your Last Enemy]);
-                    if (get_property("NCtoC") != "true")
+                    if (prefOff("NCtoC"))
                         use_if_have_skill(page_text, $skill[BCZ: Refracted Gaze]);
                     // NCtoC is unset until an NC is first turned into a combat,
                     // so test it the way the other guards here do.
-                    if (have_equipped($item[legendary seal-clubbing club]) && get_property("NCtoC") != "true" && to_int(get_property("_clubEmBattlefieldUsed")) < 5)
+                    if (have_equipped($item[legendary seal-clubbing club]) && prefOff("NCtoC") && to_int(get_property("_clubEmBattlefieldUsed")) < 5)
                         use_skill($skill[Club 'Em Across the Battlefield]);
                     if (free_monster(last_monster())) {
                         cleanUp();
@@ -1025,7 +1025,7 @@ void main(int round, monster mob, string page_text) {
             // charge on the monitor's cheatsheet table.
             if (current_round() > 0)
                 feelNostalgic(last_monster(), page_text);
-            if (bcz_gaze_ready() && get_property("NCtoC") != "true") {
+            if (bcz_gaze_ready() && prefOff("NCtoC")) {
                 use_skill($skill[Sea *dent: Talk to Some Fish]);
                 if (to_monster(get_property("lastEncounter")) != $monster[none] && item_amount($item[mer-kin cheatsheet]) < 10)
                     use_skill($skill[BCZ: Refracted Gaze]);
@@ -1091,7 +1091,7 @@ void main(int round, monster mob, string page_text) {
                 && item_amount($item[mer-kin killscroll]) > 0
                 && current_round() > 0 && last_monster().phylum == $phylum[mer-kin])
                 throw_item($item[mer-kin killscroll]);
-            if (get_property("skateParkStatus") == "war" && get_property("_utsGymForceNC") == "true"){
+            if (get_property("skateParkStatus") == "war" && prefOn("_utsGymForceNC")){
                 foreach sk in $skills[Launch spikolodon spikes, MCHUGELARGE avalanche]
                     use_if_have_skill(page_text, sk);
             }

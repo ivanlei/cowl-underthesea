@@ -85,6 +85,51 @@ def check_traps():
                 fail(f"{f}:{n}", f"`{m.group(1)}` is an ASH reserved word -- rename the variable")
 
 
+# ------------------------------------------------ boolean preference checks
+#
+# There were four spellings of "is this preference a yes" across the scripts --
+# == "true" 31 times, != "true" 28, == "false" 54, != "false" 2 -- and two of
+# them do not mean the same thing. An unset preference reads as whatever
+# defaults.txt says, which for one KoLmafia has never heard of is "": `==
+# "false"` is then FALSE where `!= "true"` is TRUE, and a guard written the
+# first way never fires. check_pref_defaults below finds the ones that are
+# already dead; this keeps a new one from being written.
+#
+# prefOn/prefOff are the way to ask. Three places still compare by hand and say
+# why beside themselves: a preference with four states rather than two, an
+# opt-out whose unset value means ON, and the helper's own body.
+BOOL_PREF_OK = (
+    # Four states, not two: "", "true", "false" and "unready".
+    "_utsScreechFired",
+    # An opt-out: unset means ON, and only an explicit "false" turns it off.
+    "uts_allocLive",
+    # The dread-card block, which check_pref_defaults already reports as dead
+    # and the baseline already carries. Reporting it twice in two wordings
+    # would make the same four findings look like eight.
+    "catalogChecked", "DS1", "DS6", "DS8",
+)
+
+
+def check_bool_prefs():
+    for f in ash_files():
+        for n, line in lines_of(f):
+            bare = re.sub(r"//.*", "", line)
+            if "boolean prefOn(" in bare or "return get_property(name)" in bare:
+                continue
+            # Both the quoted form and the bare one. `== false` without
+            # quotes is the worst of the spellings: it reads as a boolean
+            # comparison and is not one -- ASH turns the literal into the
+            # string "false" -- which is how DS1, DS6 and DS8 came to be
+            # guards that never fire.
+            m = re.search(r'get_property\(\s*"?([^")]+)"?\s*\)\s*[!=]=\s*"?(true|false)"?', bare)
+            if m and m.group(1) not in BOOL_PREF_OK:
+                quoted = f'"{m.group(2)}"' in bare
+                fail(f"{f}:{n}",
+                     f'{m.group(1)} compared against {m.group(2)} by hand -- '
+                     "use prefOn()/prefOff(), which cannot be written the dead way"
+                     + ("" if quoted else "; and the bare literal is a string here, not a boolean"))
+
+
 # ------------------------------------------------------------- bare aborts
 #
 # An abort is the last thing the run says, and for most of this script's life
@@ -368,6 +413,7 @@ def main():
     data = data_dir(sys.argv)
     check_traps()
     check_bare_aborts()
+    check_bool_prefs()
     check_choice_fallthrough()
     if data is None:
         print("note: no KoLmafia data found, so the preference-default, id/comment")

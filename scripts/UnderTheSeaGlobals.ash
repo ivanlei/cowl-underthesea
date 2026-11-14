@@ -1,5 +1,154 @@
 since r29402;
 import <seedfinder/seedfinder.ash>;
+
+// ─── SAYING WHERE THE RUN IS ────────────────────────────────────────────────
+//
+// WHAT THIS IS FOR. COwliCK: "when it aborts for some reason, it's super hard
+// to know why." An abort used to print one phrase with no context -- "get
+// fishy", "Software glitch failed" -- into a gCLI that had said nothing about
+// where the run had got to or why it had gone that way, and the run is a
+// thousand turns long. Working backwards from the phrase meant reading the
+// script.
+//
+// So three things, and the third is the one that answers him:
+//
+//   a phase announces itself, so the gCLI has a spine to read against;
+//   a decision says what it weighed, so a surprising branch is visible as it
+//     happens rather than inferred afterwards;
+//   an abort prints the last ten lines of both, plus what it needed, what was
+//     actually there, and what to do.
+//
+// HOW LOUD, from `uts_trace`:
+//
+//   quiet    phases and aborts, and nothing else
+//   normal   adds the decisions and the step() lines  (the default)
+//   verbose  adds detail a decision would otherwise only summarise
+//
+// Normal is the default, which is COwliCK's call -- a run that aborts once is
+// a run you would otherwise have to do AGAIN to find out why, and the second
+// run is a different day with different gear and different drops.
+//
+// step() PRINTS AT NORMAL, not only at verbose. It is 54 lines the run has
+// always shown; gating them behind a level nobody has set would make this
+// change quieter than what it replaces, which is the opposite of the point.
+    string utsTraceLevel() {
+        string level = get_property("uts_trace");
+        return level == "" ? "normal" : level;
+    }
+
+// Nothing asks for verbose yet; it is here so that a decision which wants to
+// show its working has somewhere to put it without a second preference.
+    boolean utsTraceVerbose() {
+        return utsTraceLevel() == "verbose";
+    }
+
+    boolean utsTraceQuiet() {
+        return utsTraceLevel() == "quiet";
+    }
+
+// THE LAST TEN LINES, kept so an abort can show how the run got where it is.
+//
+// In memory rather than in a preference: a line per step over a thousand turns
+// is a lot of writes for something only ever read at the moment it stops. The
+// PHASE is a preference as well (below), because that is the part worth having
+// after the fact and the part the CCS can see.
+    string [int] utsTrail;
+    string utsTrailHead;     // the phase, repeated into an abort
+
+    void utsRemember(string line) {
+        utsTrail[count(utsTrail)] = line;
+        // Ten is what fits on screen without becoming the thing you have to
+        // read past to find the abort.
+        if (count(utsTrail) > 10) {
+            string [int] kept;
+            foreach i, l in utsTrail
+                if (i > 0) kept[count(kept)] = l;
+            utsTrail = kept;
+        }
+    }
+
+// Progress tracker
+    void step(string msg) {
+        utsRemember(msg);
+        if (utsTraceQuiet()) return;
+        print("UTS:   " + msg, "blue");
+    }
+
+// A PHASE OF THE RUN, which is what seaMonkees() is a list of.
+//
+// Also written to _uts_phase, because the CCS is a separate script invocation
+// and does not share module state -- so a combat-side abort can still say
+// which phase of the run it was in, and the preference is still there to read
+// once the run has stopped.
+// A phase prints at every level, quiet included: it is the spine the rest is
+// read against, and twenty lines over a thousand turns is not noise.
+    void uts_phase(string name) {
+        utsTrailHead = name;
+        set_property("_uts_phase", name);
+        utsRemember("── " + name);
+        print("UTS ──── " + name + " ────", "blue");
+    }
+
+// WHAT WAS NEEDED AND WHAT THERE WAS, in one phrasing.
+//
+// One function rather than a sentence written out at each site, so that a
+// farming loop's trace line and the abort that follows when the farming fails
+// read identically -- "sea leather: need 1, have 0" in both. Two spellings of
+// the same shortfall is how you end up unsure whether they are the same
+// shortfall.
+    string uts_need(string what, int want, int have) {
+        return what + ": need " + want + ", have " + have;
+    }
+
+// WHY THE RUN WENT THAT WAY. `because` carries the numbers it turned on --
+// "garbo_valueOfFreeFight 0 <= valueOfAdventure 3000" -- rather than the name
+// of the predicate, because the name is in the script and the numbers are not.
+    void uts_why(string choice, string because) {
+        string line = choice + (because == "" ? "" : " — " + because);
+        utsRemember(line);
+        if (utsTraceQuiet()) return;
+        print("UTS   " + line, "blue");
+    }
+
+// WHAT IS SHORT AND HOW IT WILL BE MADE UP, said once before a loop that farms
+// for it. This is the line COwliCK asked for by name: "need # of <item> only
+// have # so farming via XYZ".
+//
+// SILENT WHEN NOTHING IS SHORT. A run that already has the thing should not
+// narrate not needing it, and these loops mostly do not run -- there are about
+// twenty of them and a line each every time would bury the ones that matter.
+//
+// BEFORE THE LOOP, NOT INSIDE IT: inside, it prints once per turn spent.
+    void uts_short(string what, int want, int have, string how) {
+        if (have >= want) return;
+        uts_why(uts_need(what, want, have), how);
+    }
+
+// AN ABORT THAT SAYS ALL FOUR THINGS: where it was, what it needed, what was
+// actually there, and what you can do about it.
+//
+// `had` and `fix` may be empty where there is honestly nothing to add -- but
+// an empty `fix` is worth a second look, because "what do I do now" is the
+// question that made this file necessary.
+    void uts_stop(string needed, string had, string fix) {
+        string where = utsTrailHead == "" ? get_property("_uts_phase") : utsTrailHead;
+        print("UTS ────────────────────────────────────────────────", "red");
+        print("UTS Aborting" + (where == "" ? "" : ", in " + where)
+            + ", " + my_turncount() + " turns in.", "red");
+        if (count(utsTrail) > 0) {
+            print("UTS How it got here:", "red");
+            foreach i, l in utsTrail
+                print("UTS     " + l, "gray");
+        }
+        print("UTS What it needed: " + needed, "red");
+        if (had != "") print("UTS What there was: " + had, "red");
+        if (fix != "") print("UTS What to do:     " + fix, "red");
+        abort(needed);
+    }
+
+    void uts_stop(string needed, string fix) {
+        uts_stop(needed, "", fix);
+    }
 // ─── GLOBALS ──────────────────────────────────────────────────────────────────   
     int pearlsDoneToday;
     string boss,modes;
@@ -290,7 +439,10 @@ import <seedfinder/seedfinder.ash>;
                 // Stops after a minute with no answer.
                 if (mall_price(it) > to_int(get_property("autoBuyPriceLimit"))
                     && !user_confirm("Price of " + it + " exceeds autoBuyPriceLimit. Buy it anyway?", 60000, false))
-                    abort("Price of " + it + " exceeds autoBuyPriceLimit. Pull it by hand or raise the limit.");
+                    uts_stop(it + " from the mall, to pull it",
+                        "it costs " + mall_price(it) + " meat, autoBuyPriceLimit is "
+                            + get_property("autoBuyPriceLimit") + ", and the buy was declined",
+                        "pull it by hand, or raise autoBuyPriceLimit past " + mall_price(it));
                 if (!buy_using_storage(it)) {
                     print("Could not buy " + it + " to pull it.", "red");
                     return false;
@@ -317,7 +469,11 @@ import <seedfinder/seedfinder.ash>;
                 return;
         }
         if (!use(1, $item[11-leaf clover]))
-            abort("Could not get an 11-leaf clover. The hermit may be out today, and buying from him needs autoSatisfyWithCoinmasters = true.");
+            uts_stop("an 11-leaf clover, to get Lucky!",
+                "none on hand and one could not be acquired",
+                "the hermit may be out of them today; buying from him also needs "
+                    + "autoSatisfyWithCoinmasters = true, which is currently "
+                    + get_property("autoSatisfyWithCoinmasters"));
     }
 
 // Low roll of Saucegeyser in the worn gear, crits and lanterns aside.
@@ -326,155 +482,6 @@ import <seedfinder/seedfinder.ash>;
             + max(numeric_modifier("Hot Spell Damage"), numeric_modifier("Cold Spell Damage"));
         float base = 60 + floor(0.4 * my_buffedstat($stat[mysticality])) + flat;
         return floor(base * (1 + numeric_modifier("Spell Damage Percent") / 100));
-    }
-
-// ─── SAYING WHERE THE RUN IS ────────────────────────────────────────────────
-//
-// WHAT THIS IS FOR. COwliCK: "when it aborts for some reason, it's super hard
-// to know why." An abort used to print one phrase with no context -- "get
-// fishy", "Software glitch failed" -- into a gCLI that had said nothing about
-// where the run had got to or why it had gone that way, and the run is a
-// thousand turns long. Working backwards from the phrase meant reading the
-// script.
-//
-// So three things, and the third is the one that answers him:
-//
-//   a phase announces itself, so the gCLI has a spine to read against;
-//   a decision says what it weighed, so a surprising branch is visible as it
-//     happens rather than inferred afterwards;
-//   an abort prints the last ten lines of both, plus what it needed, what was
-//     actually there, and what to do.
-//
-// HOW LOUD, from `uts_trace`:
-//
-//   quiet    phases and aborts, and nothing else
-//   normal   adds the decisions and the step() lines  (the default)
-//   verbose  adds detail a decision would otherwise only summarise
-//
-// Normal is the default, which is COwliCK's call -- a run that aborts once is
-// a run you would otherwise have to do AGAIN to find out why, and the second
-// run is a different day with different gear and different drops.
-//
-// step() PRINTS AT NORMAL, not only at verbose. It is 54 lines the run has
-// always shown; gating them behind a level nobody has set would make this
-// change quieter than what it replaces, which is the opposite of the point.
-    string utsTraceLevel() {
-        string level = get_property("uts_trace");
-        return level == "" ? "normal" : level;
-    }
-
-// Nothing asks for verbose yet; it is here so that a decision which wants to
-// show its working has somewhere to put it without a second preference.
-    boolean utsTraceVerbose() {
-        return utsTraceLevel() == "verbose";
-    }
-
-    boolean utsTraceQuiet() {
-        return utsTraceLevel() == "quiet";
-    }
-
-// THE LAST TEN LINES, kept so an abort can show how the run got where it is.
-//
-// In memory rather than in a preference: a line per step over a thousand turns
-// is a lot of writes for something only ever read at the moment it stops. The
-// PHASE is a preference as well (below), because that is the part worth having
-// after the fact and the part the CCS can see.
-    string [int] utsTrail;
-    string utsTrailHead;     // the phase, repeated into an abort
-
-    void utsRemember(string line) {
-        utsTrail[count(utsTrail)] = line;
-        // Ten is what fits on screen without becoming the thing you have to
-        // read past to find the abort.
-        if (count(utsTrail) > 10) {
-            string [int] kept;
-            foreach i, l in utsTrail
-                if (i > 0) kept[count(kept)] = l;
-            utsTrail = kept;
-        }
-    }
-
-// Progress tracker
-    void step(string msg) {
-        utsRemember(msg);
-        if (utsTraceQuiet()) return;
-        print("UTS:   " + msg, "blue");
-    }
-
-// A PHASE OF THE RUN, which is what seaMonkees() is a list of.
-//
-// Also written to _uts_phase, because the CCS is a separate script invocation
-// and does not share module state -- so a combat-side abort can still say
-// which phase of the run it was in, and the preference is still there to read
-// once the run has stopped.
-// A phase prints at every level, quiet included: it is the spine the rest is
-// read against, and twenty lines over a thousand turns is not noise.
-    void uts_phase(string name) {
-        utsTrailHead = name;
-        set_property("_uts_phase", name);
-        utsRemember("── " + name);
-        print("UTS ──── " + name + " ────", "blue");
-    }
-
-// WHAT WAS NEEDED AND WHAT THERE WAS, in one phrasing.
-//
-// One function rather than a sentence written out at each site, so that a
-// farming loop's trace line and the abort that follows when the farming fails
-// read identically -- "sea leather: need 1, have 0" in both. Two spellings of
-// the same shortfall is how you end up unsure whether they are the same
-// shortfall.
-    string uts_need(string what, int want, int have) {
-        return what + ": need " + want + ", have " + have;
-    }
-
-// WHY THE RUN WENT THAT WAY. `because` carries the numbers it turned on --
-// "garbo_valueOfFreeFight 0 <= valueOfAdventure 3000" -- rather than the name
-// of the predicate, because the name is in the script and the numbers are not.
-    void uts_why(string choice, string because) {
-        string line = choice + (because == "" ? "" : " — " + because);
-        utsRemember(line);
-        if (utsTraceQuiet()) return;
-        print("UTS   " + line, "blue");
-    }
-
-// WHAT IS SHORT AND HOW IT WILL BE MADE UP, said once before a loop that farms
-// for it. This is the line COwliCK asked for by name: "need # of <item> only
-// have # so farming via XYZ".
-//
-// SILENT WHEN NOTHING IS SHORT. A run that already has the thing should not
-// narrate not needing it, and these loops mostly do not run -- there are about
-// twenty of them and a line each every time would bury the ones that matter.
-//
-// BEFORE THE LOOP, NOT INSIDE IT: inside, it prints once per turn spent.
-    void uts_short(string what, int want, int have, string how) {
-        if (have >= want) return;
-        uts_why(uts_need(what, want, have), how);
-    }
-
-// AN ABORT THAT SAYS ALL FOUR THINGS: where it was, what it needed, what was
-// actually there, and what you can do about it.
-//
-// `had` and `fix` may be empty where there is honestly nothing to add -- but
-// an empty `fix` is worth a second look, because "what do I do now" is the
-// question that made this file necessary.
-    void uts_stop(string needed, string had, string fix) {
-        string where = utsTrailHead == "" ? get_property("_uts_phase") : utsTrailHead;
-        print("UTS ────────────────────────────────────────────────", "red");
-        print("UTS Aborting" + (where == "" ? "" : ", in " + where)
-            + ", " + my_turncount() + " turns in.", "red");
-        if (count(utsTrail) > 0) {
-            print("UTS How it got here:", "red");
-            foreach i, l in utsTrail
-                print("UTS     " + l, "gray");
-        }
-        print("UTS What it needed: " + needed, "red");
-        if (had != "") print("UTS What there was: " + had, "red");
-        if (fix != "") print("UTS What to do:     " + fix, "red");
-        abort(needed);
-    }
-
-    void uts_stop(string needed, string fix) {
-        uts_stop(needed, "", fix);
     }
 
 // ─── EQUIPMENT AND OUTFIT HELPERS ───────────────────────────────────────────
@@ -512,7 +519,12 @@ import <seedfinder/seedfinder.ash>;
                 if (slots[num] == "")
                     continue;
                 if (!contains_text(verify, to_item(slots[num]) + " mounted in slot #" + (num + 1)))
-                    abort("Codpiece slot incorrect");
+                    // Asked for and not shown there: the socket is occupied, the gem is
+                    // not yours, or KoL answered the mount with something unexpected.
+                    uts_stop(to_item(slots[num]) + " in Eternity Codpiece slot #" + (num + 1),
+                        "the codpiece page does not show it mounted there; you hold "
+                            + item_amount(to_item(slots[num])) + " of it",
+                        "open the codpiece in the relay and socket it by hand, then rerun");
             }
         }
         cli_execute("refresh inv");
@@ -860,14 +872,18 @@ import <seedfinder/seedfinder.ash>;
             highShiny() && MobiusNCReady() && available_amount($item[M&ouml;bius ring]) > 0);
         foreach slo in equipmentSelection{
             if (available_amount(equipmentSelection[slo]) == 0)
-                abort("Missing " + equipmentSelection[slo]);
+                uts_stop(equipmentSelection[slo] + " for the " + slo + " slot",
+                    "none on hand, in the closet or equipped",
+                    "acquire or pull one, or drop that slot from the outfit asked for here");
             if (badMaxString(to_string(equipmentSelection[slo])))
                 maximizerInput += ", equip [" + to_int(equipmentSelection[slo]) + "]";
             else
                 maximizerInput += ", equip " + equipmentSelection[slo];
         }
         if (!maximize(maximizerInput, false))
-            abort("Maximizer failed");
+            uts_stop("the maximizer to satisfy: " + maximizerInput,
+                "it could not, with the gear currently available",
+                "run that maximizer string by hand to see which term it cannot meet");
         if (modes != "")
             cli_execute(modes);
     }
@@ -964,7 +980,10 @@ import <seedfinder/seedfinder.ash>;
             }
         }
         if (num == 0)
-            abort("Generic mining did not find teflon ore, mine manually. TIP: the ores show up in adjacent veins of 5.");
+            uts_stop("a teflon ore vein in the Anemone Mine",
+                "neither the main sweep nor either fallback found one on the visible wall",
+                "mine it by hand -- the ores show up in adjacent veins, so when you find "
+                    + "one, dig next to it -- then rerun");
         return num;
     }
 
@@ -2455,7 +2474,10 @@ void fillPrereqs(int outcomeSlot, string pitchType) {
         before -= 1;
     }
     if (filled < 2)
-        abort("Not enough open slots to fill prereqs for outcome at slot " + outcomeSlot);
+        uts_stop("two free pitch slots before slot " + outcomeSlot + ", to set up that outcome",
+            "only " + filled + " of the slots before it are still empty",
+            "today\'s pitches are already committed; the outcome has to wait for "
+                + "tomorrow\'s dartboard, or be aimed at a later slot");
 }
 boolean canBaseballBanish(int p){
     if (get_property("pitchNum9") == "")

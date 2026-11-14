@@ -171,7 +171,10 @@ void finishFreeFight() {
             runaway();
     }
     if (current_round() > 0)
-        abort("Could not finish or escape " + last_monster() + ". Finish the fight by hand.");
+        uts_stop("the fight with " + last_monster() + " to end",
+            "it could not be won and could not be run from, after three tries at round "
+                + current_round(),
+            "finish it by hand, then rerun");
 }
 
 // Finish off the enemy with saucegeyser, guarded against infinite loops.
@@ -192,7 +195,10 @@ void cleanUp() {
         if (round == current_round()) {
             loopCount += 1;
             if (loopCount > 3)
-                abort("May be stuck in an infinite saucegeyser loop");
+                uts_stop("saucegeyser to advance the round",
+                    "three casts in a row left the round at " + current_round()
+                        + " -- the spell goes out and nothing happens",
+                    "finish the fight by hand; usually no MP, or a monster immune to it");
         }
         if (my_mp() < 24)
             break;
@@ -210,7 +216,9 @@ void attackCleanUp() {
         if (round == current_round()) {
             loopCount += 1;
             if (loopCount > 3)
-                abort("May be stuck in an infinite attack loop");
+                uts_stop("a plain attack to advance the round",
+                    "three attacks in a row left the round at " + current_round(),
+                    "finish the fight by hand; a monster that cannot be hit will do this");
         }
     }
 }
@@ -236,7 +244,11 @@ item yogDeleveler(){
         if (item_amount(it) > 0 && !itemUsedThisCombat(it))
             return it;
     }
-    abort("Yog-Urt needs a deleveler and none is left.");
+    uts_stop("something to throw at Yog-Urt to delevel her",
+        "her attack is " + monster_attack() + " against " + my_buffedstat($stat[moxie])
+            + " moxie, and every deleveler is spent or already used this fight",
+        "nothing can be done mid-fight; next run, bring more mouthsoap, crayon "
+            + "shavings, table tennis balls, lassos or cowbells");
     return $item[none];
 }
 
@@ -270,7 +282,9 @@ void yogSuckramentAction(boolean needHeal) {
     } else if (heal != $item[none]) {
         throw_item(heal);
     } else {
-        abort("Yog-Urt: nothing harmless left to throw under More Like a Suckrament. Finish the fight by hand.");
+        uts_stop("something harmless to throw while More Like a Suckrament is up",
+            "no deleveler, no Doc Galaktik pair and no healing item left to stall with",
+            "finish the fight by hand");
     }
 }
 
@@ -280,9 +294,13 @@ void yogUrtFight() {
     int stuck;
     while (current_round() > 0 && have_effect($effect[More Like a Suckrament]) > 0) {
         if (current_round() > 12)
-            abort("Yog-Urt: More Like a Suckrament is still up past round 12. Finish the fight by hand.");
+            uts_stop("More Like a Suckrament to wear off",
+                "still up at round " + current_round() + "; it should be gone by 12",
+                "finish the fight by hand");
         if (stuck >= 3)
-            abort("Yog-Urt: throws are not advancing the round. Finish the fight by hand.");
+            uts_stop("a throw to advance the round",
+                "three in a row left the round at " + current_round(),
+                "finish the fight by hand");
         int round = current_round();
         // She hits first each round; past the counted heals the last action only fills the round.
         yogSuckramentAction(round <= YogHealingsNeeded[beads]);
@@ -500,7 +518,9 @@ void main(int round, monster mob, string page_text) {
 
         case $location[Madness Bakery]:
             if (!have_skill($skill[%fn, Release the Patriotic Screech!]))
-                abort("Need patriotic eagle");
+                uts_stop("the Patriotic Screech, to banish out of the Madness Bakery",
+                    "the skill is not available -- the Patriotic Eagle is not the active familiar",
+                    "put the eagle out and rerun; the bakery is only entered for the banish");
             use_skill($skill[%fn, Release the Patriotic Screech!]);
             use_if_have_skill(page_text, $skill[Sea *dent: Talk to Some Fish]);
             free_kill(page_text, false);
@@ -530,7 +550,10 @@ void main(int round, monster mob, string page_text) {
                 }
             }
             if (last_monster() == $monster[tumbleweed])
-                abort("Unexpected mob encountered in shadow rift");
+                uts_stop("a shadow rift monster worth fighting",
+                    "a tumbleweed turned up instead, which means the rift is not the zone "
+                        + "this fight thought it was in",
+                    "finish by hand and check which shadow rift the run is pointed at");
             if (!can_still_steal() || available_amount($item[pristine fish scale]) < 6)
                 use_if_have_skill(page_text, $skill[Sea *dent: Talk to Some Fish]);
             darts();
@@ -775,7 +798,11 @@ void main(int round, monster mob, string page_text) {
                 throw_items($item[sea cowbell], $item[sea cowbell]);
                 throw_items($item[sea cowbell], $item[sea lasso]);
                 if (current_round() != 0){
-                    abort("For some reason seahorse wasn't tamed, check that out");
+                    uts_stop("the wild seahorse to be tamed by the cowbell-and-lasso throws",
+                        "the throws went out and the fight is still going at round " + current_round()
+                            + "; cowbells " + item_amount($item[sea cowbell])
+                            + ", lassos " + item_amount($item[sea lasso]),
+                        "finish the fight by hand and see what the seahorse did with them");
                 }
             }
             if (highShiny() && get_property("swordOfSWordsMonster") != "775" && my_familiar() == $familiar[sword of s words]){
@@ -813,7 +840,9 @@ void main(int round, monster mob, string page_text) {
                             if (item_amount($item[pulled yellow taffy]) > 0)
                                 throw_item($item[pulled yellow taffy]);
                         } else {
-                            abort("Software glitch failed");
+                            uts_stop("the software glitch to produce a Bugged bugbear",
+                                "it produced " + last_monster() + " instead",
+                                "finish the fight by hand; the glitch is spent either way");
                         }
                     }
                     mcTwistMobHit(page_text);
@@ -969,7 +998,10 @@ void main(int round, monster mob, string page_text) {
                     if (free_monster(last_monster())) {
                         cleanUp();
                     } else {
-                        abort("backed up to a nonfree monster?");
+                        uts_stop("the backup camera to re-fight a free monster",
+                            "it brought back " + last_monster() + ", which costs a turn",
+                            "finish the fight by hand; check what lastCopyableMonster was when the "
+                                + "backup was spent");
                     }
                 }
             }
@@ -1077,7 +1109,7 @@ void main(int round, monster mob, string page_text) {
                     if (current_round() > 0)
                         why += " The fight is still in progress: finish it by hand.";
                     print(why, "red");
-                    abort(why);
+                    uts_stop(why, "", "see the line above for what the fight was trying to do");
                 }
                 int castRound = current_round();
                 use_skill($skill[saucegeyser]);
@@ -1140,7 +1172,9 @@ void main(int round, monster mob, string page_text) {
         case $location[Mer-kin Temple]:
             if (last_monster() == $monster[Yog-Urt, Elder Goddess of Hatred]){
                 if (my_maxhp() > 311)
-                    abort("Too much HP to beat Yogurt (need < 312 after debuff) — check what's granting HP");
+                    uts_stop("maximum HP under 312, so her debuff leaves her beatable",
+                        "maximum HP is " + my_maxhp(),
+                        "take off whatever is granting the HP and rerun; her fight is gated on it");
                 if (available_amount($item[crayon shavings]) >= 9)
                     throw_items($item[crayon shavings], $item[mer-kin healscroll]);
                 else 
@@ -1164,7 +1198,10 @@ void main(int round, monster mob, string page_text) {
             }
             if (last_monster() == $monster[Dad Sea Monkee]){
                 cli_execute("dad");
-                abort("execute spells in the above order, can use shrap instead of toynado and volcanometeor instead of awesome balls of fire");
+                uts_stop("the Dad Sea Monkee spell order, which is printed above",
+                    "the fight is yours to run from here -- the script does not cast it",
+                    "cast them in the order shown; shrapnel works in place of toynado, and "
+                        + "volcanometeor in place of saucegeyser");
             }
             break;
     }

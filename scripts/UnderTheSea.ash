@@ -75,6 +75,7 @@ string DropsItems;
                     i += 1;
                 }
             case "itdrop":
+                survivalBuffs();
                 foreach ef in $effects[Who's Going to Pay This Drunken Sailor?,Fat Leon's Phat Loot Lyric,Lubricating Sauce,Thoughtful Empathy,Singer's Faithful Ocelot,
                     Leash of Linguini,Empathy,donho's bubbly ballad,the ballad of richie thingfinder]{
                     itdrop[i] = ef;
@@ -100,6 +101,7 @@ string DropsItems;
                 print("Item drop is " + numeric_modifier("item drop"));
                 break;
             case "-combat":
+                survivalBuffs();
                 foreach ef in $effects[the sonata of sneakiness, ultra-soft steps,
                     Wild and Westy!, hiding from seekers, life goals,
                     Smooth Movements, Apriling Band Patrol Beat,
@@ -119,6 +121,7 @@ string DropsItems;
                 print("Combat rate is " + numeric_modifier("Combat Rate"));
                 break;
             case "combat":
+                survivalBuffs();
                 foreach ef in $effects[Carlweather's Cantata of Confrontation,
                     Fresh Breath, Musk of the Moose, Crunchy Steps, Apriling Band Battle Cadence,
                     Towering Muscles, Attracting Snakes, Bloodbathed] {

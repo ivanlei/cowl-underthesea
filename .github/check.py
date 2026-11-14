@@ -234,7 +234,11 @@ def check_choice_fallthrough():
         body = text[start:end]
         if not body.strip() or re.match(r"\s*case\s", body):
             continue          # falls through to the next case on purpose
-        if "run_choice" not in body and "stashboxCheck" not in body and "pickChoice" not in body:
+        # utsPick is run_choice with a trace line in front of it; both count as
+        # answering. The rename to utsPick was what first made this rule report
+        # a choice that answers perfectly well.
+        if ("run_choice" not in body and "utsPick" not in body
+                and "stashboxCheck" not in body and "pickChoice" not in body):
             continue          # not a case that answers at all
         # Safe two ways: an answer at the case's own brace level always runs,
         # and so does an if/else chain that ends in a bare `else`. Without
@@ -245,7 +249,7 @@ def check_choice_fallthrough():
         # case is wrong. An `else if` chain with no final bare `else` is
         # reported, which is the right way round to be wrong.
         depth, unconditional, bare_else = 0, False, False
-        for tok in re.finditer(r"[{}]|\belse\s+if\b|\belse\b|run_choice|stashboxCheck|pickChoice", body):
+        for tok in re.finditer(r"[{}]|\belse\s+if\b|\belse\b|run_choice|utsPick|stashboxCheck|pickChoice", body):
             t = tok.group(0)
             if t == "{":
                 depth += 1

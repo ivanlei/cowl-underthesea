@@ -124,6 +124,27 @@ import <seedfinder/seedfinder.ash>;
         uts_why(uts_need(what, want, have), how);
     }
 
+// ─── THE CHOICE OVERRIDE'S OWN VOICE ────────────────────────────────────────
+//
+// UnderTheSea_Choice.ash answers 46 choice adventures and said nothing about
+// any of them. A wrong option is invisible: the turn is spent, the run carries
+// on, and what shows up later is a missing item three phases away.
+//
+// utsChoiceNow is set once at the top of its main(); every pick reads it, so a
+// case does not have to repeat the number it is already inside.
+    int utsChoiceNow;
+
+    void utsPick(int opt, string because) {
+        uts_why("choice " + utsChoiceNow + " -> option " + opt, because);
+        run_choice(opt);
+    }
+
+// A pick whose reason is the case itself -- the run_choice(1) group, where
+// there is one sensible answer and no decision to explain.
+    void utsPick(int opt) {
+        utsPick(opt, "");
+    }
+
 // AN ABORT THAT SAYS ALL FOUR THINGS: where it was, what it needed, what was
 // actually there, and what you can do about it.
 //
@@ -428,13 +449,25 @@ import <seedfinder/seedfinder.ash>;
         return storage_amount(it) > 0 || mall_price(it) <= to_int(get_property("autoBuyPriceLimit"));
     }
 
+// A PULL IS A SIDE EFFORT WITH FOUR WAYS TO DO NOTHING -- out of ronin, out of
+// pulls, already pulled today, or not buyable -- and three of them return false
+// silently. Said here rather than at the 39 call sites, which is also what
+// keeps the wording the same at all of them.
     boolean pullSequence(item it) {
         // Out of ronin there are no pull limits, and retrieve_item can use the mall directly.
         if (can_interact())
             return retrieve_item(it);
-        if (pulls_remaining() == 0)
+        if (pulls_remaining() == 0) {
+            uts_why("not pulling " + it, "no pulls left today");
             return false;
-        if (!pulledToday(it)) {
+        }
+        if (pulledToday(it)) {
+            uts_why("not pulling " + it, "already pulled one today");
+            return false;
+        }
+        uts_why("pulling " + it,
+            pulls_remaining() + " pulls left, " + storage_amount(it) + " in storage");
+        {
             if (storage_amount(it) == 0){
                 // Stops after a minute with no answer.
                 if (mall_price(it) > to_int(get_property("autoBuyPriceLimit"))
@@ -450,12 +483,19 @@ import <seedfinder/seedfinder.ash>;
             }
             return take_storage(1, it);
         }
-        return false;
     }
 
+// Three sources, tried in order, and the one that works is worth naming: a run
+// that spent its August scepter cast here looks the same afterwards as one that
+// used a clover, until something else wants the scepter.
     void getLucky() {
         if (have_effect($effect[Lucky!]) > 0)
             return;
+        uts_why("getting Lucky!",
+            "aug 2nd " + (have_skill($skill[Aug. 2nd: Find an Eleven-Leaf Clover Day])
+                    && get_property("_aug2Cast") == "false" ? "available" : "no")
+                + ", heartstone " + (available_amount($item[heartstone]) > 0 ? "held" : "no")
+                + ", clovers bought " + get_property("_cloversPurchased"));
         if (have_skill($skill[Aug. 2nd: Find an Eleven-Leaf Clover Day])
             && get_property("_aug2Cast") == "false"
             && to_int(get_property("_augSkillsCast")) < 5) {

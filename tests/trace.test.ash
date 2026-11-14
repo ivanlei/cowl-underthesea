@@ -135,6 +135,19 @@ void main() {
     ck(utsTrail[0], "sea leather: need 2, have 1 — farming the corral",
         "and it reads as the shortfall and the remedy");
 
+    // ── what a choice says ──────────────────────────────────────────────────
+    //
+    // utsPick wraps run_choice, so it cannot be called here without answering a
+    // choice that is not on screen. What CAN be checked is the sentence it
+    // builds, which is the part that has to name the choice it is inside --
+    // utsChoiceNow is set once in main() and read by every case, so a case that
+    // ran without it would report choice 0.
+    utsTrail.clear();
+    utsChoiceNow = 1525;
+    uts_why("choice " + utsChoiceNow + " -> option 3", "a reason");
+    ck(utsTrail[0], "choice 1525 -> option 3 — a reason", "a pick names its choice");
+    utsChoiceNow = 0;
+
     set_property("uts_trace", keepLevel);
     set_property("_uts_phase", keepPhase);
 

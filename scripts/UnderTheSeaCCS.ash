@@ -385,6 +385,12 @@ string noteScreechReady(string page_text) {
 // ─── MAIN CCS ─────────────────────────────────────────────────────────────────
 
 void main(int round, monster mob, string page_text) {
+    // WHAT THIS FIGHT IS, at verbose only: the CCS runs once per round, so a
+    // line here at normal would be thousands of them. Gated to the first round
+    // so it is one line per fight rather than one per round even then.
+    if (round <= 1 && utsTraceVerbose())
+        print("UTS:   fight: " + mob + " in " + my_location(), "blue");
+
     // The postloop re-aims the Patriotic Screech onto a harmless phylum.
     // Cast it here rather than through a combat filter: use_skill hands back
     // the action's own response, so the caller reads a result instead of
@@ -392,6 +398,14 @@ void main(int round, monster mob, string page_text) {
     // Cast once only: the screech does not end the fight, and re-submitting a
     // skill KoL has stopped offering is rejected without advancing the round.
     if (get_property("_utsScreechReaim") == "true") {
+        // THE TWO MODES THAT REDUCE THE WHOLE CCS TO A KILL, said once per
+        // fight. Both are postloop flags, and both have been left set by a run
+        // that died mid-loop -- at which point every in-run fight quietly
+        // stops getting the full consult and the run goes wrong somewhere
+        // else entirely. Worth a line at normal because the symptom never
+        // points back here.
+        if (round <= 1)
+            uts_why("CCS reduced to a kill", "_utsScreechReaim is set (postloop screech re-aim)");
         // Only the zone's natives are safe to banish; a wanderer would take
         // the banish onto its own phylum, and the pearl zones are fish.
         // A result left unset tells the caller no cast was attempted.
@@ -412,6 +426,8 @@ void main(int round, monster mob, string page_text) {
         return;
     }
     if (get_property("_utsPearlFarm") == "true") {
+        if (round <= 1)
+            uts_why("CCS reduced to a kill", "_utsPearlFarm is set (postloop pearl farming)");
         noteScreechReady(page_text);
         free_kill(page_text, false);
         cleanUp();

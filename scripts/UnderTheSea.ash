@@ -956,12 +956,21 @@ string DropsItems;
     }
 
     void monkeypaw(item it){
+        // A wish and a farming trip are very different costs, and which one
+        // happened is invisible afterwards.
         if (available_amount($item[cursed monkey's paw]) == 0 || to_int(get_property("_monkeyPawWishesUsed")) == 5){
+            uts_why("farming for " + it + " rather than wishing",
+                available_amount($item[cursed monkey's paw]) == 0
+                    ? "no cursed monkey's paw"
+                    : "all 5 wishes are spent");
             while (available_amount(it) == 0){
                 getMissingCorralItems();
             }
-        } else
+        } else {
+            uts_why("wishing for " + it,
+                get_property("_monkeyPawWishesUsed") + "/5 wishes used");
             cli_execute("monkeypaw item " + it);
+        }
     }
 
     // Shadow Rift fight gear. The Liquidizer grants the Douse Foe the CCS casts on a shadow slab.

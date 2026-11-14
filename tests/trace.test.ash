@@ -119,6 +119,22 @@ void main() {
     uts_why("route drop", "");
     ck(utsTrail[3], "route drop", "a why with no reason is just the choice");
 
+    // ── what is short ───────────────────────────────────────────────────────
+    //
+    // uts_short is the line COwliCK asked for by name, and the half worth a
+    // test is the half that says NOTHING: about twenty loops call it and most
+    // of them do not run, so a version that spoke when the need was already met
+    // would bury the ones that matter under the ones that do not.
+    utsTrail.clear();
+    uts_short("sea leather", 1, 1, "farming the corral");
+    ck(count(utsTrail), 0, "nothing said when the need is met");
+    uts_short("sea leather", 1, 4, "farming the corral");
+    ck(count(utsTrail), 0, "nothing said when there is more than enough");
+    uts_short("sea leather", 2, 1, "farming the corral");
+    ck(count(utsTrail), 1, "one line when short");
+    ck(utsTrail[0], "sea leather: need 2, have 1 — farming the corral",
+        "and it reads as the shortfall and the remedy");
+
     set_property("uts_trace", keepLevel);
     set_property("_uts_phase", keepPhase);
 

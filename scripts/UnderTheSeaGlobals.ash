@@ -122,6 +122,36 @@ import <seedfinder/seedfinder.ash>;
         return to_int(get_property("garbo_valueOfFreeFight")) > to_int(get_property("valueOfAdventure"));
     }
 
+// The same comparison in words, for a uts_why line. Beside the predicate
+// rather than at the branch, so the two cannot drift: a reason that explains a
+// test the script no longer makes is worse than no reason.
+    string whyShiny() {
+        int fight = to_int(get_property("garbo_valueOfFreeFight"));
+        int adv = to_int(get_property("valueOfAdventure"));
+        return "free fight " + fight + (fight > adv ? " > " : " <= ") + "adventure " + adv;
+    }
+
+// Which of the three this character is missing, for a uts_why line. Names the
+// ones you DO NOT have, because that is the half that explains the branch.
+    string whyLowShiny() {
+        // A LIST, NOT $items[...]. That literal is a SET: a two-variable
+        // foreach over it binds the second name to `true` rather than to the
+        // item, so every have_item() would be asked about "true". check.py
+        // catches it, and caught it here.
+        item [int] shiny = {
+            $item[2002 Mr. Store Catalog],
+            $item[cursed monkey's paw],
+            $item[august scepter],
+        };
+        string [int] missing;
+        foreach i, it in shiny
+            if (!have_item(it)) missing[count(missing)] = it.to_string();
+        if (count(missing) == 0) return "all three shiny sources on hand";
+        string list;
+        foreach i, m in missing list = list + (list == "" ? "" : ", ") + m;
+        return "no " + list;
+    }
+
     boolean lowShiny() {
         return !have_item($item[2002 Mr. Store Catalog])
             && !have_item($item[cursed monkey's paw])
@@ -405,6 +435,20 @@ import <seedfinder/seedfinder.ash>;
         utsRemember(line);
         if (utsTraceQuiet()) return;
         print("UTS   " + line, "blue");
+    }
+
+// WHAT IS SHORT AND HOW IT WILL BE MADE UP, said once before a loop that farms
+// for it. This is the line COwliCK asked for by name: "need # of <item> only
+// have # so farming via XYZ".
+//
+// SILENT WHEN NOTHING IS SHORT. A run that already has the thing should not
+// narrate not needing it, and these loops mostly do not run -- there are about
+// twenty of them and a line each every time would bury the ones that matter.
+//
+// BEFORE THE LOOP, NOT INSIDE IT: inside, it prints once per turn spent.
+    void uts_short(string what, int want, int have, string how) {
+        if (have >= want) return;
+        uts_why(uts_need(what, want, have), how);
     }
 
 // AN ABORT THAT SAYS ALL FOUR THINGS: where it was, what it needed, what was

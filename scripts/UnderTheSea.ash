@@ -825,6 +825,9 @@ string DropsItems;
     }
 
     void oldGuy(){
+        uts_phase("the Old Man (sand dollars)");
+        uts_short("sand dollar", 50, item_amount($item[sand dollar]),
+            "farming the Wreck of the Edgar Fitzsimmons for black glass");
         while (item_amount($item[sand dollar]) < 50) {
             getSandDollar();
         }
@@ -1076,11 +1079,13 @@ string DropsItems;
     // farmPrayerbeads(): combatScrollHint() calls that purely to burn a turn,
     // and a version that could no-op would spin it forever.
     void pullPrayerbead(){
+        uts_phase("prayerbeads: pull");
         if (available_amount($item[mer-kin prayerbeads]) < 3)
             pullSequence($item[mer-kin prayerbeads]);
     }
 
     void farmPrayerbeads(){
+        uts_phase("prayerbeads: farm");
         if (get_property("_monkeyPawWishesUsed").to_int() < 5 && have_item($item[cursed monkey's paw]))
             cli_execute("monkeypaw wish mer-kin prayerbeads");
         else {
@@ -1135,6 +1140,8 @@ string DropsItems;
 
     void combatScrollHint(){
         if (get_property("dreadScroll5") == "0"){
+            uts_short("mer-kin killscroll", 1, item_amount($item[mer-kin killscroll]),
+                "opening a thingpouch, else pulling, else farming prayerbeads");
             while (item_amount($item[mer-kin killscroll]) == 0){
                 if (item_amount($item[mer-kin thingpouch]) > 0)
                     use(item_amount($item[mer-kin thingpouch]), $item[mer-kin thingpouch]);
@@ -1144,6 +1151,8 @@ string DropsItems;
             }
         }
         if (get_property("dreadScroll2") == "0"){
+            uts_short("mer-kin healscroll", 1, item_amount($item[mer-kin healscroll]),
+                "pulling, else farming prayerbeads");
             while (item_amount($item[mer-kin healscroll]) == 0){
                 if (lowShiny() || pulls_remaining() <= reservedPulls()
                     || !pullSequence($item[mer-kin healscroll]))
@@ -1157,6 +1166,7 @@ string DropsItems;
 
 // Quest Handling Part 2
     void SWordLasso(){
+        uts_phase("Sword of S Words: early sea lasso");
         if (have_familiar($familiar[Sword of S Words]) && count_summons() >= 3 && to_float(get_property("swordOfSWordsMonster")) < 10 && 
             (highShiny() || available_amount($item[closed-circuit pay phone]) == 0)){
             use_familiar($familiar[Sword of S Words]);
@@ -1168,8 +1178,9 @@ string DropsItems;
     }
 
     void unlockGuild(){
+        uts_phase("unlock the guild (shadow bricks)");
         if (get_property("questG03Ego") == "unstarted" && item_amount($item[Closed-circuit pay phone]) > 0 && my_path().id == 55 && !highShiny()) {
-            step("phase: guild unlock");
+            uts_phase("guild unlock");
             if (get_property(questProp[ps]) != "finished") {
                 // Moxie shortcut — tearaway pants skip the grind
                 if (ps == $stat[moxie] && available_amount($item[tearaway pants]) > 0) {
@@ -1216,7 +1227,7 @@ string DropsItems;
     }
 
     void flytrap(){
-        step("phase: flytrap pellet (Sea Monkees start)");
+        uts_phase("flytrap pellet (Sea Monkees start)");
         if (get_property("questS02Monkees") == "unstarted") {
             //SWord --> skeleton store for flytrap
             if (!highShiny() && have_familiar($familiar[sword of s words]) && available_amount($item[archaeologist's spade]) > 0){
@@ -1248,6 +1259,8 @@ string DropsItems;
                     adv($location[An octopus's garden]);
                 }
             }
+            uts_short("wriggling flytrap pellet", 1, item_amount($item[wriggling flytrap pellet]),
+                "fighting for one; the Sea Monkees quest does not start without it");
             while (item_amount($item[wriggling flytrap pellet]) == 0) {
                 use_familiar("exp");
                 string conditional;
@@ -1273,7 +1286,7 @@ string DropsItems;
     }
 
     void fitzsimmons(){
-        step("phase: Wreck of the Edgar Fitzsimmons (step 1)");
+        uts_phase("Wreck of the Edgar Fitzsimmons (step 1)");
         while (get_property("questS02Monkees") == "step1") {
             if (NCForceEstimate() >= 4){
                 if (get_property("noncombatForcerActive") != "true")
@@ -1289,7 +1302,7 @@ string DropsItems;
     }
 
     void grandpa(){
-        step("phase: Grandpa unlock (step 4)");
+        uts_phase("Grandpa unlock (step 4)");
         if (get_property("questS02Monkees") == "step4") {
             use_familiar("-combat");
             if (have_effect($effect[Colorfully Concealed]) == 0 && lowShiny() == false) {
@@ -1324,7 +1337,7 @@ string DropsItems;
     }
 
     void golemRecall(){
-        step("phase: golem recall (step 6)");
+        uts_phase("golem recall (step 6)");
         if (get_property("questS02Monkees") == "step6" && get_property("_monsterHabitatsMonster") == "" && my_path().id == 55 && !highShiny() && have_skill($skill[just the facts])) {
             if (have_familiar($familiar[red-nosed snapper]))
                 use_familiar("itdrop");
@@ -1393,7 +1406,7 @@ string DropsItems;
     }
 
     void outpost(){
-        step("phase: Mer-kin Outpost (stashbox / lockkey)");
+        uts_phase("Mer-kin Outpost (stashbox / lockkey)");
         if (NCForceEstimate() >= 5 && have_effect($effect[driving waterproofly]) > 0)
             pillKeeper("free familiar");
         while ((item_amount($item[Mer-kin stashbox]) == 0  && get_property("corralUnlocked") == "false") || 
@@ -1494,7 +1507,7 @@ string DropsItems;
     }
 
     void unholyDiver(string str){
-        step("phase: rusty rivets");
+        uts_phase("rusty rivets (" + str + ")");
         while (!diverPartsComplete() && to_slot(divingHelmet()) != $slot[hat]) {
             if (baseballPlayers() >= 9 && idInList(get_property("baseballTeam"), 745))
                 baseballD();
@@ -1614,7 +1627,7 @@ string DropsItems;
     }
 
     void caliginous(string str){
-        step("phase: Mom rescue (habitats / cyberzone)");
+        uts_phase("Mom rescue (" + str + ")");
         int initialMomProgress = 24;
         if (available_amount($item[backup camera]) == 0)
             initialMomProgress += 4;
@@ -1690,10 +1703,11 @@ string DropsItems;
     }
 
     void corral(string str){
+        uts_phase("Coral Corral (" + str + ")");
         if (get_property("corralUnlocked") != "true")
             abort("corral not unlocked");
         while (str == "drop" && get_property("_epicMcTwistUsed") == "false"){
-            step("phase: McTwist corral");
+            uts_phase("Coral Corral: McTwist");
             string conditional;
             if (have_effect($effect[shadow waters]) == 0 && lowShiny() == false)
                 shadowRift();
@@ -1720,20 +1734,26 @@ string DropsItems;
             adv($location[The Coral Corral]);
         }
         if (str == "drop" && item_amount($item[sea lasso]) < 5 && to_int(get_property("lassoTrainingCount")) < 20){
+            uts_short("sea lasso", 6, item_amount($item[sea lasso]),
+                "no cursed monkey's paw, so farming the corral for them");
             while (!have_item($item[cursed monkey's paw]) && item_amount($item[sea lasso]) < 6){
                 getMissingCorralItems();
             }
             codpiece("none");
         }
         if (str == "collect" || str == "drop"){
-            step("phase: collect sea leathers");
+            uts_phase("Coral Corral: sea leathers");
             if (available_amount($item[sea chaps]) == 0 && tailpiece() == $item[none]) {
+                uts_short("sea leather", 1, item_amount($item[sea leather]),
+                    "farming the corral, for sea chaps");
                 while (item_amount($item[sea leather]) < 1){
                     getMissingCorralItems();
                 }
                 create($item[sea chaps]);
             }
             if (available_amount($item[sea cowboy hat]) == 0) {
+                uts_short("sea leather", 1, item_amount($item[sea leather]),
+                    "farming the corral, for a sea cowboy hat");
                 while (item_amount($item[sea leather]) < 1){
                     getMissingCorralItems();
                 }
@@ -1743,7 +1763,7 @@ string DropsItems;
     }
 
     void shadowTeflon(){
-        step("phase: shadow rift prep");
+        uts_phase("shadow rift prep");
         if (my_path().id == 55 && !highShiny()){
             if (to_int(get_property("encountersUntilSRChoice")) > 9
                 && get_property("questRufus") == "unstarted"
@@ -1767,7 +1787,7 @@ string DropsItems;
             }
         }
 
-        step("phase: teflon ore");
+        uts_phase("teflon ore");
         if (item_amount($item[teflon ore]) == 0 && tailpiece() == $item[none]) {
             if (available_amount($item[mer-kin digpick]) == 0 && lowShiny() == false
                 && pulls_remaining() > reservedPulls()){
@@ -1804,7 +1824,7 @@ string DropsItems;
             }
 
             // ── Lasso training via shadow rift ────────────────────────────────────────
-            step("phase: lasso training");
+            uts_phase("lasso training");
             // With uts_saveSeadentWave the Rift stays dry and backupLasso() does the training.
             while (to_int(get_property("lassoTrainingCount")) < 20 && !highShiny() && (have_effect($effect[shadow affinity]) > 0 || get_property("_shadowAffinityToday") == "false") && available_amount($item[closed-circuit pay phone]) > 0
                 && get_property("uts_saveSeadentWave") != "true")
@@ -1833,7 +1853,10 @@ string DropsItems;
     }
 
     void backupLasso() {
+        uts_phase("backup camera: lasso training");
         // ── Lasso training backup ─────────────────────────────────────────────────
+        uts_short("lasso training", 20, to_int(get_property("lassoTrainingCount")),
+            "the shadow rift did not finish it, so backing it up with turns");
         while (to_int(get_property("lassoTrainingCount")) < 20) {
             if (available_amount($item[closed-circuit pay phone]) > 0 && get_property("uts_saveSeadentWave") != "true")
                 print("Lasso training didn't finish via shadow rift", "red");
@@ -1859,17 +1882,22 @@ string DropsItems;
     }
 
     void seahorsePrep(){
+        uts_phase("seahorse prep");
         int wantCowbell;
         if (available_amount($item[cursed monkey's paw]) == 0 || highShiny())
             wantCowbell = 2;
         else if (to_int(get_property("_monkeyPawWishesUsed")) > 3)
             wantCowbell = 2-(5 - to_int(get_property("_monkeyPawWishesUsed")));
         if (get_property("seahorseName") == "" && item_amount($item[sea cowbell]) < wantCowbell){
+            uts_short("sea cowbell", wantCowbell, item_amount($item[sea cowbell]),
+                "farming the corral; the taming needs them and the seahorse is untamed");
             while (item_amount($item[sea cowbell]) < wantCowbell){
                 getMissingCorralItems();
             }
         }
         if (get_property("seahorseName") == "" && item_amount($item[sea lasso]) == 0){
+            uts_short("sea lasso", 1, item_amount($item[sea lasso]),
+                "farming the corral; the seahorse cannot be tamed without one");
             while (item_amount($item[sea lasso]) == 0){
                 getMissingCorralItems();
             }
@@ -1877,7 +1905,7 @@ string DropsItems;
     }
 
     void seahorseTaming(){
-        step("phase: seahorse taming");
+        uts_phase("seahorse taming");
         while (get_property("seahorseName") == "") {
             // Rift fights in the crystal ball meet the Rift's own prediction, which clears the Corral's lock.
             int dodges = 0;
@@ -1915,9 +1943,12 @@ string DropsItems;
             }
             tempEquipment(DropsItems,conditional + delay());
             
+            uts_short("sea lasso", 1, item_amount($item[sea lasso]), "wishing for one");
             while (item_amount($item[sea lasso]) == 0)
                 monkeypaw($item[sea lasso]);
             // Without a wish left, the Corral's sea cows supply the rest.
+            uts_short("sea cowbell", 3, item_amount($item[sea cowbell]),
+                "wishing while wishes last, then farming the corral's sea cows");
             while (item_amount($item[sea cowbell]) < 3) {
                 if (available_amount($item[cursed monkey's paw]) > 0
                     && to_int(get_property("_monkeyPawWishesUsed")) < 5)
@@ -1931,6 +1962,7 @@ string DropsItems;
     }
 
     void postSeahorse(){
+        uts_phase("after the seahorse");
         // ── Drain remaining shadow affinity ──────────────────────────────────────
         while (have_effect($effect[shadow affinity]) > 0){
             while (get_property("_curveballFightsLeft").to_int() > 0 && get_property("_curveballMonster") == "some fish"){
@@ -1949,6 +1981,8 @@ string DropsItems;
         boolean buildsTailpiece = tailpiece() == $item[none];
         if (buildsTailpiece) {
             equipSwimTrunks();
+            uts_short("sand dollar", 10, item_amount($item[sand dollar]),
+                "farming the Wreck of the Edgar Fitzsimmons");
             while (item_amount($item[sand dollar]) < 10)
                 getSandDollar();
             // The diver phase runs only while the seahorse is untamed, so a
@@ -2027,8 +2061,9 @@ string DropsItems;
     }
 
     void YogUrt(){
+        uts_phase("Yog-Urt");
         // ── YogUrt preparation ────────────────────────────────────────────────────
-        step("phase: Yog-Urt preparation");
+        uts_phase("Yog-Urt: preparation");
         if ((get_property("yogUrtDefeated") == "false" && my_path().id == 55) || (my_path().id == 0 && boss == "Yogurt")) {
             if (get_property("isMerkinHighPriest") == "false") {
                 if (isKBandSushiEnough() == false || my_path().id == 0){
@@ -2036,7 +2071,7 @@ string DropsItems;
                     if (my_path().id == 0){
                         cli_execute("acquire 10 mer-kin cheatsheet, 10 mer-kin wordquiz, mer-kin killscroll, mer-kin healscroll, mer-kin knucklebone");
                     }
-                    step("phase: elementary school (cheatsheets / vocabulary)");
+                    uts_phase("Yog-Urt: elementary school (cheatsheets / vocabulary)");
                     while (item_amount($item[mer-kin cheatsheet]) < 9 && get_property("merkinVocabularyMastery") == "0") {
                         getCheatsheet();
                     }
@@ -2164,7 +2199,7 @@ string DropsItems;
                     dreadSeedCheck();
                 }
 
-                step("phase: library (dreadscroll)");
+                uts_phase("Yog-Urt: library (dreadscroll)");
                 // Dread scroll acquisition
                 while (available_amount($item[mer-kin dreadscroll]) == 0 || get_property("dreadScroll1") == "0" || get_property("dreadScroll6") == "0" || get_property("dreadScroll8") == "0") {
                     merkinLib();
@@ -2219,7 +2254,7 @@ string DropsItems;
                         leprecondo("22,24,12,8,13,15,10,4,5,6");
                 }
 
-                step("phase: becoming High Priest");
+                uts_phase("Yog-Urt: becoming High Priest");
                 while (get_property("isMerkinHighPriest") == "false") {
                     if (turns_played() <= 17 && get_property("uts_godRunGuard") == "true" && get_property("dreadScroll7") == "0"){
                         if (item_amount($item[mer-kin worktea]) > 0){
@@ -2373,6 +2408,7 @@ string DropsItems;
     }
 
     void postYogUrt(){
+        uts_phase("after Yog-Urt");
         if (get_property("yogUrtDefeated") == "false" && my_path().id == 55)
             abort("Passing over yogUrt too early — rerun script");
         if (my_path().id == 55){
@@ -2430,9 +2466,10 @@ string DropsItems;
     }
 
     void Shub(){
+        uts_phase("Shub-Jigguwatt quest");
         if (my_path().id == 55 || (my_path().id == 0 && boss == "Shub")){
             // ── Gladiator gear grind ──────────────────────────────────────────────────
-            step("phase: gymnasium (gladiator gear)");
+            uts_phase("gymnasium (gladiator gear)");
             // || not &&: the colosseum outfit needs BOTH pieces, so keep looping
             // while either is missing.
             while (available_amount($item[Mer-kin gladiator mask]) == 0
@@ -2458,7 +2495,7 @@ string DropsItems;
 
             refresh_status();
             // ── Colosseum ─────────────────────────────────────────────────────────────
-            step("phase: colosseum");
+            uts_phase("colosseum");
             // Gladiators are insta-kill immune (bricks and X-Rays glance, the
             // Asdon missile reads UNTARGETABLE), so the club is the only free
             // round in the building -- against immune monsters Club 'Em still
@@ -2510,7 +2547,7 @@ string DropsItems;
             }
 
             // ── Shub-Jigguwatt ────────────────────────────────────────────────────────
-            step("phase: Shub-Jigguwatt");
+            uts_phase("Shub-Jigguwatt (the fight)");
             if (get_property("shubJigguwattDefeated") == "false") {
                 if (my_path().id == 0)
                     retrieve_item(8,$item[crayon shavings]);
@@ -2540,9 +2577,10 @@ string DropsItems;
     }
     
     void finalBoss(){
+        uts_phase("the final boss");
         if (my_path().id == 55){
             // ── Naughty Sorceress intro ───────────────────────────────────────────────
-            step("phase: Naughty Sorceress");
+            uts_phase("Naughty Sorceress");
             if (get_property("questL13Final") == "unstarted") {
                 if (to_int(get_property("_batWingsFreeFights")) < 5) {
                     tempEquipment("spell damage percent, mys,sea", "Mer-kin gladiator mask,Mer-kin gladiator tailpiece," + if_equip($item[bat wings])
@@ -3022,6 +3060,7 @@ string DropsItems;
 // ─── SEA MONKEES ──────────────────────────────────────────────────────────────
 // Post-quest cleanup and spending, once the Seaceress is dead.
 void endOfRun() {
+    uts_phase("end of run");
     while (item_amount($item[sand penny]) > 30)
         buy($coinmaster[Wet Crap For Sale], 1, $item[water-logged pill]);
     while (item_amount($item[sand penny]) > 10)
@@ -3044,8 +3083,9 @@ void endOfRun() {
 }
 
 void seaMonkees() {
+    uts_phase("the Sea run");
     if (my_path().id == 55 && get_property("questL13Final") == "finished") {
-        step("final boss already dead, skipping to the end of the run");
+        uts_why("skipping to the end of the run", "questL13Final is finished — the final boss is already dead");
         endOfRun();
         return;
     }
@@ -3102,25 +3142,45 @@ void seaMonkees() {
     // Mid shiny yes yes no --> mctwist taffy unholy diver --> cyberrealm caliginous --> max item corral until necessary items are collected --> lasso shadow rift --> finish corral
     // no no yes --> greg unholy diver --> 1 turn in caliginous if has backup cam --> max item backp/software glitch mctwist corral --> caliginous --> finish lasso --> finish corra
     // no no no --> sea cowboy  --> unholy diver mctwist taffy lasso --> caliginous abyss --> finish corral
+    // THE ROUTE, and why. Four ways through the same three places, chosen on
+    // what this account has; the comment block above says what each one is
+    // for. Saying which and on what, as it is chosen, is the difference
+    // between reading a surprising run afterwards and guessing at it.
     if (get_property("seahorseName") == ""){
         if (my_path().id == 0){
+            uts_why("route: aftercore", "not in a Sea run, so no route to pick");
             if (!retrieve_item($item[aerated diving helmet]))
                 abort("Could not build an aerated diving helmet.");
         } else if (highShiny()){
+            uts_why("route: high shiny — abyss, diver, collect the corral", whyShiny());
             caliginous("cheap");
             unholyDiver("direct");
             corral("collect");
         } else if (have_skill($skill[steely-eyed squint]) && MomNCyber() && lassoShadow() && available_amount($item[blood cubic zirconia]) > 0){
+            uts_why("route: cyberrealm — summon the diver, then drop the corral",
+                whyShiny() + "; squint, Mom-and-cyber, shadow lasso and a blood cubic zirconia all on hand");
             unholyDiver("summon");
             caliginous("cyberrealm");
             corral("drop");
         } else {
+            // Which of the four conditions failed is the useful half: the
+            // route is the fallback precisely because one of them did.
+            string short;
+            if (!have_skill($skill[steely-eyed squint])) short = short + (short == "" ? "" : ", ") + "no steely-eyed squint";
+            if (!MomNCyber()) short = short + (short == "" ? "" : ", ") + "no Mom-and-cyber (eagle, server room key, Overclock(10), Just the Facts)";
+            if (!lassoShadow()) short = short + (short == "" ? "" : ", ") + "no shadow lasso (monodent and a pay phone)";
+            if (available_amount($item[blood cubic zirconia]) == 0) short = short + (short == "" ? "" : ", ") + "no blood cubic zirconia";
+            uts_why("route: fallback — collect the corral, then the diver",
+                whyShiny() + "; " + short);
             corral("collect");
             unholyDiver("direct");
-            if (MomNCyber())
+            if (MomNCyber()){
+                uts_why("abyss: cyberrealm", "eagle, server room key, Overclock(10) and Just the Facts all on hand");
                 caliginous("cyberrealm");
-            else
+            } else {
+                uts_why("abyss: cheap", "no Mom-and-cyber, so no cyberzone route");
                 caliginous("cheap");
+            }
         }
     }
     shadowTeflon();

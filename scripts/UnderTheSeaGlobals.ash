@@ -612,6 +612,65 @@ import <seedfinder/seedfinder.ash>;
             return it.to_string() + ",";
     }
 
+    // ─── DRESSING TO KILL RATHER THAN TO FARM ───────────────────────────────
+    //
+    // Every fighting setup in this script asks the maximizer for item drop, and
+    // item drop values no spell damage at all, so a +50% spell damage accessory
+    // sits in inventory while the run loses the fight it would have won. In one
+    // logged evening that cost 13 fights and 26 aborts: Saucegeyser came to a
+    // median of 561 under an item-drop objective against monsters of 650 to
+    // 1000 HP, and 2166 in the boss setups that happen to force the Medal --
+    // where every single cast was a one-shot kill.
+    //
+    // THE GATE IS FRAGILITY, NOT DAMAGE DEALT, and that is the whole of why it
+    // works. Asking "does one Saucegeyser kill?" reads the gear this adds, so
+    // the answer flips the moment the gear goes on: force the Medal, start
+    // one-shotting, stop forcing it, stop one-shotting, alternating every turn.
+    // Incoming damage and maximum HP are untouched by anything below -- the
+    // Medal carries Mysticality, spell damage and MP regen, no HP, moxie,
+    // absorption or resistance -- so this answer is the same before and after.
+    //
+    // It also says the right thing: a character that can stand three rounds can
+    // afford to spend its slots on drops, and one that cannot has to kill first.
+
+    // Split out so a test can pin it at the numbers off a real log without
+    // needing that character. Three rounds because the CCS stops attacking at
+    // my_hp() <= expected_damage(), so a fight it cannot finish inside the HP on
+    // hand is a fight it loses rather than one it takes longer over.
+    boolean cannotTakeThreeRounds(int worstHit, int maxHP) {
+        return 3 * worstHit > maxHP;
+    }
+
+    // The Sea's hardest ordinary hitters, all three at 750 attack before ML.
+    // A zone-by-zone answer would be better, but the callers below run before
+    // the run moves, so my_location() there is still the zone being left.
+    //
+    // $monsters[...] is a SET, so this takes one name: a second would bind
+    // `true`. get_monsters() returns a map and is the other way round.
+    boolean fragileForTheSea() {
+        int worst;
+        foreach mob in $monsters[Mer-kin raider, sea cowboy, unholy diver, Mer-kin specter] {
+            if (expected_damage(mob) > worst)
+                worst = expected_damage(mob);
+        }
+        return cannotTakeThreeRounds(worst, my_maxhp());
+    }
+
+    // Forced by name rather than added to the objective on purpose: a forced
+    // slot cannot disturb the weights the objective is balancing, where a
+    // "spell damage" term traded against "item drop" would need a character in
+    // that state to tune and this one cannot be run to find out.
+    //
+    // THE LEGENDARY PASTA WAND IS LEFT OUT DELIBERATELY. It is the other +50%,
+    // but it is a weapon, and the weapon slot already carries a forced Monodent
+    // in most of these strings -- displacing it would cost the Sea Dent casts
+    // the run is built on. An accessory has no such argument against it.
+    string killGear() {
+        if (!fragileForTheSea())
+            return "";
+        return if_equip($item[Congressional Medal of Insanity]);
+    }
+
     string bathysphere(item it) {
         if (!my_familiar().underwater && have_effect($effect[driving waterproofly]) == 0)
             return "little bitty bathysphere,";
@@ -937,6 +996,21 @@ import <seedfinder/seedfinder.ash>;
     }
 
     void tempEquipment(string maximizerInput, string itemInput){
+        // A setup that asks for item drop is a setup that expects to fight, and
+        // all 14 of the logged evening's lost fights whose objective is known
+        // were under one. The Sneak-hunting and resistance setups ask for
+        // something else and are left exactly as they were.
+        //
+        // PREPENDED, not appended, for two reasons. equipSlots() hands out
+        // slots first-come-first-served and silently drops an accessory when
+        // all three are already spoken for, so appending would make the kill
+        // gear the first casualty in exactly the most heavily dressed setups.
+        // And if_equip() returns its name comma-terminated, so putting it in
+        // front is well formed whatever the caller's string ends with, where
+        // appending to one that does not end in a comma would run two item
+        // names together.
+        if (maximizerInput.contains_text("item drop") || maximizerInput.contains_text("Drops Items"))
+            itemInput = killGear() + itemInput;
         if (have_equipped($item[Elf Guard SCUBA tank]))
             cli_execute("unequip Elf Guard SCUBA tank");
         item [slot] equipmentSelection = equipSlots(itemInput,

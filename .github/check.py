@@ -85,6 +85,42 @@ def check_traps():
                 fail(f"{f}:{n}", f"`{m.group(1)}` is an ASH reserved word -- rename the variable")
 
 
+# ------------------------------------------------------------- bare aborts
+#
+# An abort is the last thing the run says, and for most of this script's life
+# it was one phrase into a gCLI that had not said where the run was or why it
+# had gone that way -- "get fishy", "Software glitch failed", and twice
+# abort() with nothing in it at all. Working backwards from that meant reading
+# eight thousand lines.
+#
+# uts_stop() is the way to stop now: it prints where it was, what it needed,
+# what there actually was, and what to do. This is what keeps the next one from
+# being a phrase again -- the failure it catches is not a bug, it is a thing
+# that will read fine to whoever writes it and be useless to whoever hits it.
+#
+# The helper itself calls abort() and is excused by name.
+def check_bare_aborts():
+    for f in ash_files():
+        depth = 0           # braces open since uts_stop started; 0 = outside it
+        inside = False
+        for n, line in lines_of(f):
+            bare = re.sub(r"//.*", "", line)
+            if not inside and re.search(r"void\s+uts_stop\s*\(", bare):
+                inside = True
+                depth = 0
+            if inside:
+                # COUNTED, NOT MATCHED ON A LONE `}`. The helper has an `if`
+                # inside it whose closing brace is a line of its own, so the
+                # first spelling of this left the helper there and then flagged
+                # the helper's own abort -- 70 findings for 69 sites.
+                depth += bare.count("{") - bare.count("}")
+                if depth <= 0 and "}" in bare:
+                    inside = False
+                continue
+            if re.search(r"(?<![\w.])abort\s*\(", bare):
+                fail(f"{f}:{n}", "abort() directly -- use uts_stop(needed, had, fix) so it says where it was and what to do")
+
+
 # ------------------------------------------------- preference vs its default
 #
 # A guard that tests a preference against a value it never holds is dead, and a
@@ -327,6 +363,7 @@ def baseline():
 def main():
     data = data_dir(sys.argv)
     check_traps()
+    check_bare_aborts()
     check_choice_fallthrough()
     if data is None:
         print("note: no KoLmafia data found, so the preference-default, id/comment")

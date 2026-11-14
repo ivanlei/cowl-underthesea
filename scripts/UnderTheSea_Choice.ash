@@ -9,7 +9,7 @@ import UnderTheSeaGlobals;
 void stashboxCheck(int [int] priority) {
     foreach i, opt in priority {
         if (!contains_text(get_property("stashboxChecked"), to_string(opt))) {
-            run_choice(opt);
+            utsPick(opt);
             string checked = get_property("stashboxChecked");
             set_property("stashboxChecked", checked == "" ? to_string(opt) : checked + "," + to_string(opt));
             if (item_amount($item[mer-kin stashbox]) > 0)
@@ -21,7 +21,7 @@ void stashboxCheck(int [int] priority) {
     // so re-search the first rather than leave it unanswered: these choices
     // have no default and mafia drops to manual control, as case 315 notes.
     if (count(priority) > 0)
-        run_choice(priority[0]);
+        utsPick(priority[0]);
 }
 
 // Search available choices for the first text match and pick it.
@@ -30,7 +30,7 @@ boolean pickChoice(string keyword) {
     string [int] choices = available_choice_options();
     foreach num, choice_text in choices {
         if (contains_text(choice_text, keyword)) {
-            run_choice(num);
+            utsPick(num);
             return true;
         }
     }
@@ -40,9 +40,10 @@ boolean pickChoice(string keyword) {
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
 
 void main(int whichchoice, string page) {
+    utsChoiceNow = whichchoice;
     switch (whichchoice) {
 
-        // ── Simple run_choice(1) cases ─────────────────────────────────────
+        // ── Simple utsPick(1) cases ─────────────────────────────────────
         case 299:
         case 303:
         case 403:
@@ -56,41 +57,41 @@ void main(int whichchoice, string page) {
         case 1564:
         case 1565:
         case 1566:
-            run_choice(1);
+            utsPick(1);
             break;
 
-        // ── Simple run_choice(2) cases ─────────────────────────────────────
+        // ── Simple utsPick(2) cases ─────────────────────────────────────
         case 804:
         case 1469:
         case 1470:
         case 1474:
         case 1494:
         case 1497:
-            run_choice(2);
+            utsPick(2);
             break;
 
-        // ── Simple run_choice(3) cases ─────────────────────────────────────
+        // ── Simple utsPick(3) cases ─────────────────────────────────────
         case 1340:
         case 1387:
         case 1467:
-            run_choice(3);
+            utsPick(3);
             break;
 
-        // ── Simple run_choice(4) cases ─────────────────────────────────────
+        // ── Simple utsPick(4) cases ─────────────────────────────────────
         case 705:
-            run_choice(4);
+            utsPick(4);
             break;
 
-        // ── Simple run_choice(5) cases ─────────────────────────────────────
+        // ── Simple utsPick(5) cases ─────────────────────────────────────
         case 1312:
         case 1599:
-            run_choice(5);
+            utsPick(5);
             break;
 
         // ── More complex cases ────────────────────────────────────────────
         case 312:
-            if (get_property("intenseCurrents") == "true"){
-                run_choice(3);
+            if (prefOn("intenseCurrents")){
+                utsPick(3);
             }
             break;
 
@@ -98,17 +99,17 @@ void main(int whichchoice, string page) {
         case 313: int [int] burglar = {0:1, 1:3, 2:2}; stashboxCheck(burglar); break;  // burglar:  1→3→2
         case 314: int [int] raider = {0:1, 1:2, 2:3}; stashboxCheck(raider); break;  // raider:   1→2→3
         case 315:
-            if (get_property("intenseCurrents") == "true"){
+            if (prefOn("intenseCurrents")){
                 if (available_amount($item[mer-kin prayerbeads]) < 3) {
-                    run_choice(3);
+                    utsPick(3);
                 } else if (available_amount($item[mer-kin killscroll]) == 0 && get_property("dreadScroll5") == "0"){
-                    run_choice(1);
+                    utsPick(1);
                 } else if (available_amount($item[mer-kin healscroll]) == 0 && get_property("dreadScroll2") == "0") {
-                    run_choice(2);
+                    utsPick(2);
                 } else {
                     // Nothing needed -- still answer the choice, or mafia drops
                     // to manual control mid-automation. Beads never hurt.
-                    run_choice(3);
+                    utsPick(3);
                 }
             } else {
                 int [int] healer = {0:3, 1:1, 2:2}; stashboxCheck(healer);
@@ -133,14 +134,14 @@ void main(int whichchoice, string page) {
             delete(elementaryQueue,0,5);
             set_property("elementaryQueue",to_string(elementaryQueue));
             set_property("NCtoC","true");
-            run_choice(1);
+            utsPick(1);
             break;
         case 401:
             elementaryQueue = to_buffer(get_property("elementaryQueue"));
             append(elementaryQueue, ", " + last_choice());
             delete(elementaryQueue,0,5);
             set_property("elementaryQueue",to_string(elementaryQueue));
-            run_choice(2);
+            utsPick(2);
             break;
 
         // ── Dread scroll puzzle ───────────────────────────────────────────
@@ -163,7 +164,7 @@ void main(int whichchoice, string page) {
                     }
                 }
             }
-            run_choice(1, "pro1=" + get_property("dreadScroll1")
+            utsPick(1, "pro1=" + get_property("dreadScroll1")
                 + "&pro2=" + get_property("dreadScroll2")
                 + "&pro3=" + get_property("dreadScroll3")
                 + "&pro4=" + get_property("dreadScroll4")
@@ -193,11 +194,11 @@ void main(int whichchoice, string page) {
                 }
             }
             // No unknown card left to spade: pick the first option rather than
-            // calling run_choice(0), which errors out of the choice handler.
+            // calling utsPick(0), which errors out of the choice handler.
             if (dread == 0)
                 dread = 1;
             string choice = available_choice_options()[dread];
-            run_choice(dread);
+            utsPick(dread);
             if (get_property("DS1") == false && get_property("dreadScroll1") != 0){
                 set_property("DS1","true");
                 for x from 1 to 10{
@@ -222,7 +223,7 @@ void main(int whichchoice, string page) {
             // mafia defaults choiceAdventure1059 to 0 rather than empty, so this
             // never answered and the choice fell through to manual control.
             if (to_int(get_property("choiceAdventure1059")) == 0)
-                run_choice(1);
+                utsPick(1);
             break;
 
 
@@ -236,23 +237,23 @@ void main(int whichchoice, string page) {
             location mapHere = my_location();
             int mapTarget = zoneTarget(mapHere);
             if (mapTarget > 0)
-                run_choice(1, "heyscriptswhatsupwinkwink=" + mapTarget);
+                utsPick(1, "heyscriptswhatsupwinkwink=" + mapTarget);
             else
-                run_choice(2);
+                utsPick(2);
             break;
 
         case 1483:
-            run_choice(1);
-            run_choice(3);
+            utsPick(1);
+            utsPick(3);
             break;
 
         case 1500:
             if (have_effect($effect[Shadow Waters]) == 0){
-                run_choice(2);
-            } else if (get_property("_shadowForestLooted") == "false"){
-                run_choice(3);
+                utsPick(2);
+            } else if (prefOff("_shadowForestLooted")){
+                utsPick(3);
             } else {
-                run_choice(2);
+                utsPick(2);
             }
             break;
 
@@ -264,7 +265,7 @@ void main(int whichchoice, string page) {
             foreach perk in $strings[impress, better, targeting, Butt] {
                 if (pickChoice(perk)) exit;
             }
-            run_choice(1);
+            utsPick(1);
             break;
 
         // ── Peridot monsters ───────────────────────────────────────
@@ -275,14 +276,14 @@ void main(int whichchoice, string page) {
             location here = my_location();
             int target = zoneTarget(here);
             if (target > 0) {
-                run_choice(1, "bandersnatch=" + target);
-                if (here == $location[The Coral Corral]) run_choice(2);
+                utsPick(1, "bandersnatch=" + target);
+                if (here == $location[The Coral Corral]) utsPick(2);
             } else {
                 // The peridot is +15 item drop, so a maximizer with an item
                 // goal can wear it into a zone the table says nothing about --
                 // the skeleton store is one. Option 2 is "I choose peace",
                 // which picks no monster; leaving it unanswered stops the run.
-                run_choice(2);
+                utsPick(2);
             }
             break;
 
@@ -311,10 +312,22 @@ void main(int whichchoice, string page) {
             string [int] choices = available_choice_options();
             if (choices[3] == ""){
                 set_location($location[An octopus's garden]);
-                run_choice(4);
+                utsPick(4);
             } else {
-                run_choice(3);
+                utsPick(3);
             }
+            break;
+
+        // A CHOICE NOBODY HERE ANSWERS. Without this the switch falls out
+        // silently, this script returns, and mafia drops to manual control
+        // with the choice still on screen -- which from the gCLI looks like
+        // the run simply stopping. It is not an abort: an unhandled choice is
+        // often harmless and mafia's own handling may well be right. It is
+        // just the one thing that should never happen quietly.
+        default:
+            uts_why("choice " + whichchoice + " -> left to KoLmafia",
+                "this script has no case for it; "
+                    + count(available_choice_options()) + " options on screen");
             break;
     }
 }

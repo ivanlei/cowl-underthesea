@@ -49,6 +49,29 @@ void ck(boolean got, boolean want, string what) {
 }
 
 void main() {
+    // ── a preference that is a yes or a no ──────────────────────────────────
+    //
+    // The point of the helpers is that the four spellings they replace do not
+    // all agree, and the disagreement is exactly at the unset value: 120 call
+    // sites now lean on prefOff being TRUE there, where the `== "false"` many
+    // of them were written as is FALSE.
+    string keepBool = get_property("uts_traceSelfTest");
+    set_property("uts_traceSelfTest", "");
+    ck(prefOn("uts_traceSelfTest"), false, "unset is not on");
+    ck(prefOff("uts_traceSelfTest"), true, "unset IS off -- the whole point");
+    set_property("uts_traceSelfTest", "true");
+    ck(prefOn("uts_traceSelfTest"), true, "true is on");
+    ck(prefOff("uts_traceSelfTest"), false, "true is not off");
+    set_property("uts_traceSelfTest", "false");
+    ck(prefOn("uts_traceSelfTest"), false, "false is not on");
+    ck(prefOff("uts_traceSelfTest"), true, "false is off");
+    // Anything that is not "true" is not a yes, which is what keeps a
+    // preference holding a third value from reading as one.
+    set_property("uts_traceSelfTest", "unready");
+    ck(prefOn("uts_traceSelfTest"), false, "some other value is not on");
+    ck(prefOff("uts_traceSelfTest"), true, "some other value is off");
+    set_property("uts_traceSelfTest", keepBool);
+
     string keepLevel = get_property("uts_trace");
     string keepPhase = get_property("_uts_phase");
 
@@ -134,6 +157,19 @@ void main() {
     ck(count(utsTrail), 1, "one line when short");
     ck(utsTrail[0], "sea leather: need 2, have 1 — farming the corral",
         "and it reads as the shortfall and the remedy");
+
+    // ── what a choice says ──────────────────────────────────────────────────
+    //
+    // utsPick wraps run_choice, so it cannot be called here without answering a
+    // choice that is not on screen. What CAN be checked is the sentence it
+    // builds, which is the part that has to name the choice it is inside --
+    // utsChoiceNow is set once in main() and read by every case, so a case that
+    // ran without it would report choice 0.
+    utsTrail.clear();
+    utsChoiceNow = 1525;
+    uts_why("choice " + utsChoiceNow + " -> option 3", "a reason");
+    ck(utsTrail[0], "choice 1525 -> option 3 — a reason", "a pick names its choice");
+    utsChoiceNow = 0;
 
     set_property("uts_trace", keepLevel);
     set_property("_uts_phase", keepPhase);

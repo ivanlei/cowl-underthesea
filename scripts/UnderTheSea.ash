@@ -217,7 +217,7 @@ string DropsItems;
             string why = "UTS: " + my_mp() + " MP and " + my_meat() + " meat can't cover the " + fight
                 + " MP of the next fight. Get MP or meat, then rerun.";
             print(why, "red");
-            abort(why);
+            uts_stop(why, "", "get MP or meat, then rerun");
         }
         return min(goal, max(fight, my_meat() / price * 9));
     }
@@ -245,7 +245,10 @@ string DropsItems;
                     cli_execute("campground rest");
             }
             set_property("_lastCombatLost", "false");
-            abort("It appears you lost the last combat, look into that");
+            uts_stop("the last combat to have been won",
+                "_lastCombatLost was set, so the run walked away from a fight it meant to win",
+                "look at what the fight was and why it was lost; the flag is cleared, so a "
+                    + "rerun will not stop here again for the same fight");
         }
         if (have_effect($effect[really quite poisoned]) > 0)
             cli_execute("uneffect really quite poisoned");
@@ -283,7 +286,9 @@ string DropsItems;
                         use_skill($skill[the ode to booze]);
                     drink($item[astral pilsner]);
                 } else {
-                    abort("no more easy diet");
+                    uts_stop("a drink the run can take without thinking about it",
+                        "no astral pilsner left and nothing else on the easy list",
+                        "eat or drink something by hand to free up the adventures, then rerun");
                 }
             }
             if (have_effect($effect[Driving Waterproofly]) == 0) {
@@ -296,7 +301,10 @@ string DropsItems;
                     if (get_fuel() >= 37)
                         cli_execute("asdonmartin drive Waterproofly");
                     else
-                        abort("Asdon Martin owners, fuel car manually until I can get some guidance on which foods are best");
+                        uts_stop("37 fuel in the Asdon Martin, to drive Waterproofly",
+                            "the tank is at " + get_fuel() + " and the pie did not fill it",
+                            "fuel the car by hand and rerun -- which food is best here is still an "
+                                + "open question, so the script will not guess at it");
                 }
             }
             if (have_effect($effect[fishy]) == 0) {
@@ -331,13 +339,17 @@ string DropsItems;
                     eatSushi();
                 }
                 if (have_effect($effect[fishy]) == 0)
-                    abort("acquire fishy failed");
+                    uts_stop("the Fishy effect, which every Sea zone needs",
+                        "sushi was eaten and it did not take",
+                        "get Fishy by hand -- a fishy pipe, fish sauce, or the Sea Monkee quest -- and rerun");
             }
         } else if (my_path().id == 0){
             if (item_amount($item[sea lasso]) == 0)
                 retrieve_item($item[sea lasso]);
             if (my_adventures() == 0) {
-                abort("Out of adventures, run consume");
+                uts_stop("an adventure to spend",
+                    "none left, and this is an aftercore run so the script does not feed you",
+                    "run your consumption script, then rerun");
             }
             if (have_effect($effect[fishy]) == 0) {
                 if (have_item($item[fishy pipe]) && get_property("_fishyPipeUsed") == "false"){
@@ -346,7 +358,10 @@ string DropsItems;
                     retrieve_item($item[fish sauce]);
                     chew($item[fish sauce]);
                 } else {
-                    abort("get fishy");
+                    uts_stop("the Fishy effect, which every Sea zone needs",
+                        "no fishy pipe, and the spleen is full at " + my_spleen_use()
+                            + "/" + spleen_limit() + " so fish sauce cannot be chewed",
+                        "get Fishy by hand, or clear some spleen and rerun");
                 }
             }
         }
@@ -468,9 +483,11 @@ string DropsItems;
 // ─── INITIALIZATION ───────────────────────────────────────────────────────────
     void initialization() {
         if (get_revision() < 29057)
-            abort("Please update mafia to newer than 29057");
+            uts_stop("KoLmafia newer than r29057", "this one is r" + get_revision(),
+                "update KoLmafia and rerun");
         if (my_path().id == 55 && in_hardcore())
-            abort("UnderTheSea only supports softcore runs.");
+            uts_stop("a softcore run", "this is hardcore",
+                "the script has no hardcore route; run it in softcore");
         // A screech rundown that aborted mid-loop leaves this set, and a stuck
         // "true" reduces the whole CCS to cleanUp(); in-run zones need the
         // full consult.
@@ -484,11 +501,15 @@ string DropsItems;
             use_familiar(chosenFamiliar);
             if (numeric_modifier("item drop") <= itdrop1){
                 if (!user_confirm("Chosen familiar is not +item, would make some RNG worse. Continue?"))
-                    abort();
+                    uts_stop("a +item familiar, or your word that the one chosen is wanted anyway",
+                        "the chosen familiar does not add item drop, and the prompt was declined",
+                        "pick a +item familiar, or answer yes next time to run with this one");
             }
         }
         if (get_property("autoSatisfyWithNPCs") == "false")
-            abort("set autoSatisfyWithNPCs = true, the script isn't going to work if it's false");
+            uts_stop("autoSatisfyWithNPCs = true",
+                "it is false, so mafia will not buy the NPC items the run assumes",
+                "set autoSatisfyWithNPCs = true and rerun");
 
         iotmChecklist();
         skillChecklist();
@@ -683,7 +704,9 @@ string DropsItems;
                         continue;
                     if (storage_amount(it) == 0){
                         if (it == $item[Congressional Medal of Insanity])
-                            abort("Get yer own CMOI, ya filthy animal!");
+                            uts_stop("a Congressional Medal of Insanity in storage",
+                                "there is none, and the script will not buy one for you",
+                                "pull or buy your own, or drop it from the pull list");
                         buy_using_storage(it);
                     }
                     take_storage(1, it);
@@ -705,7 +728,9 @@ string DropsItems;
 // ─── Questing ─────────────────────────────────────────────────────────────
     void mineAnemone(){
         if (available_amount($item[mer-kin digpick]) == 0)
-            abort("Mining for teflon ore needs a Mer-kin digpick, and there is none on hand or left to pull.");
+            uts_stop("a Mer-kin digpick, to mine teflon ore",
+                "none on hand, in the closet, or left in storage to pull",
+                "get a digpick and rerun");
         equip($item[mer-kin digpick]);
         equipSwimTrunks();
         use_familiar("itdrop");
@@ -737,7 +762,10 @@ string DropsItems;
         tempEquipment("combat,sea", if_equip(divingHelmet()) + if_equip(tailpiece()) + delay() + freeKill(forceNC ? my_location() : $location[Mer-kin Gymnasium]) + bathysphere($item[none]) + conditional);
         mood("combat");
         if (get_property("noncombatForcerActive") == "true")
-            abort("Sneak active while trying to adventure in gymnasium, get rid of it");
+            uts_stop("no noncombat forcer running, before the gymnasium",
+                "noncombatForcerActive is true, so the CCS would spend a forcer on a zone "
+                    + "whose fights are the point",
+                "use up or clear the Sneak, then rerun");
         // The CCS casts the forcers only while this reads true.
         set_property("_utsGymForceNC", to_string(forceNC));
         try {
@@ -883,7 +911,9 @@ string DropsItems;
     void getMissingCorralItems(){
         // The tame spends the cowbells, and the sea cow can stay banished after it.
         if (get_property("seahorseName") == "" && !doneWithSeaCow() && is_banished($monster[sea cow]))
-            abort("The run still needs sea cow drops, but the sea cow is banished.");
+            uts_stop("the sea cow, for drops the run still needs",
+                "it is banished and the seahorse is still untamed",
+                "wait out the banish, or re-aim it somewhere else, then rerun");
         string conditional;
         use_familiar("itdrop");
         // Backup Fidoxene site for reruns that skip the outpost phase; the
@@ -1043,7 +1073,9 @@ string DropsItems;
                 if (!idInList(get_property("mimicEggMonsters"), to_int(mon)))
                     cli_execute("c2t_megg extract " + mon);
                 if (item_amount($item[mimic egg]) == 0)
-                    abort("mimice egg failed to extract. Rerun and if this happens again ping FS");
+                    uts_stop("a mimic egg for " + mon,
+                        "the extract ran and no egg arrived; " + mimicExtractsLeft() + " extracts were left",
+                        "rerun; if it happens again, that is worth reporting to FS");
                 cli_execute("c2t_megg fight " + mon);
                 run_combat();
                 // A Force cast during the egg fight can strand the session
@@ -1440,7 +1472,11 @@ string DropsItems;
             if (contains_text(get_property("stashboxChecked"), "1")
                 && contains_text(get_property("stashboxChecked"), "2")
                 && contains_text(get_property("stashboxChecked"), "3"))
-                abort("All stashbox locations checked but no stashbox — something went wrong");
+                uts_stop("the Mer-kin stashbox, from one of the three outpost spots",
+                    "all three have been checked (" + get_property("stashboxChecked")
+                        + ") and none held it",
+                    "look in the outpost by hand; if the stashbox really is not there, clear "
+                        + "stashboxChecked and let the run look again");
             
             // Familiar choice
             if (get_property("_monsterHabitatsFightsLeft") == "1" && to_int(get_property("_monsterHabitatsRecalled")) == 2 && have_familiar($familiar[patriotic eagle]))
@@ -1565,11 +1601,13 @@ string DropsItems;
                     // Every free diver source runs above this, so no adventures
                     // here means nothing is left to spend on the hunt.
                     if (my_adventures() < 1)
-                        abort("Out of adventures with the diving helmet chain short: "
-                            + available_amount($item[rusty broken diving helmet]) + " broken helmet, "
-                            + item_amount($item[rusty porthole]) + " porthole, "
-                            + item_amount($item[rusty rivet]) + "/8 rivets, "
-                            + available_amount($item[bubblin' stone]) + " bubblin' stone.");
+                        uts_stop("adventures to finish the diving helmet chain",
+                            "none left, with "
+                                + available_amount($item[rusty broken diving helmet]) + " broken helmet, "
+                                + item_amount($item[rusty porthole]) + " porthole, "
+                                + item_amount($item[rusty rivet]) + "/8 rivets, "
+                                + available_amount($item[bubblin' stone]) + " bubblin' stone",
+                            "eat or drink for more adventures, or finish the chain by hand, then rerun");
                     string conditional;
                     if (total_turns_played( ) >= to_int(get_property("_lastFitzsimmonsHatch")) + 20){
                         use_familiar("-combat");
@@ -1617,13 +1655,15 @@ string DropsItems;
         }
         if (to_slot(divingHelmet()) != $slot[hat]
             && !retrieve_item($item[aerated diving helmet]))
-            abort("Could not build an aerated diving helmet: "
-                + available_amount($item[rusty broken diving helmet]) + " broken helmet, "
-                + item_amount($item[rusty porthole]) + " porthole, "
-                + item_amount($item[rusty rivet]) + "/8 rivets, "
-                + available_amount($item[rusty diving helmet]) + " rusty diving helmet, "
-                + available_amount($item[bubblin' stone]) + " bubblin' stone, "
-                + my_adventures() + " adventures left.");
+            uts_stop("an aerated diving helmet",
+                available_amount($item[rusty broken diving helmet]) + " broken helmet, "
+                    + item_amount($item[rusty porthole]) + " porthole, "
+                    + item_amount($item[rusty rivet]) + "/8 rivets, "
+                    + available_amount($item[rusty diving helmet]) + " rusty diving helmet, "
+                    + available_amount($item[bubblin' stone]) + " bubblin' stone, "
+                    + my_adventures() + " adventures left",
+                "the free sources above are all spent; gather the missing parts by hand, "
+                    + "or pull a helmet, then rerun");
     }
 
     void caliginous(string str){
@@ -1694,7 +1734,9 @@ string DropsItems;
                 use_familiar($familiar[glover]);
                 tempEquipment("moxie", "shark jumper,scale-mail underwear,monodent of the sea");
                 if (my_buffedstat($stat[moxie]) < 500)
-                    abort("Need 500 moxie here to be safe");
+                    uts_stop("500 buffed moxie before Cyberzone 1",
+                        "moxie is " + my_buffedstat($stat[moxie]) + " after the moxie maximizer",
+                        "buff moxie above 500 and rerun; below it the cyberzone fights can kill you");
                 adv($location[Cyberzone 1]);
             }
             while (to_int(get_property("momSeaMonkeeProgress")) < initialMomProgress)
@@ -1705,7 +1747,11 @@ string DropsItems;
     void corral(string str){
         uts_phase("Coral Corral (" + str + ")");
         if (get_property("corralUnlocked") != "true")
-            abort("corral not unlocked");
+            uts_stop("the Coral Corral unlocked",
+                "corralUnlocked is " + get_property("corralUnlocked")
+                    + "; the Sea Monkees quest is at " + get_property("questS02Monkees"),
+                "finish the Mer-kin outpost and the trailmap first -- the corral opens from "
+                    + "grandpa, not from here");
         while (str == "drop" && get_property("_epicMcTwistUsed") == "false"){
             uts_phase("Coral Corral: McTwist");
             string conditional;
@@ -2003,12 +2049,18 @@ string DropsItems;
                         getLucky();
                         equip ($slot[acc3],$item[black glass]);
                     } else
-                        abort("get a total of "+available_amount($item[pristine fish scale])+" pristine fish scale, out of hermitage clovers");
+                        uts_stop("three pristine fish scales",
+                            available_amount($item[pristine fish scale]) + " of them, and all "
+                                + get_property("_cloversPurchased") + " clovers for the day are spent",
+                            "the abyss drops them on a Lucky! turn; come back tomorrow, or get the "
+                                + "last ones by hand");
                     adv($location[the caliginous abyss]);
                 }
                 if (!retrieve_item($item[crappy Mer-kin mask]))
-                    abort("Could not build a crappy Mer-kin mask; the aerated "
-                        + "diving helmet chain is short.");
+                    uts_stop("a crappy Mer-kin mask",
+                        available_amount($item[pristine fish scale]) + "/3 pristine fish scales and "
+                            + "no aerated diving helmet to cut up",
+                        "finish the diving helmet chain, or gather three fish scales by hand");
             }
             if (available_amount($item[crappy Mer-kin tailpiece]) == 0){
                 while (available_amount($item[pristine fish scale]) < 3){
@@ -2016,20 +2068,27 @@ string DropsItems;
                         getLucky();
                         equip ($slot[acc3],$item[black glass]);
                     } else
-                        abort("get a total of "+available_amount($item[pristine fish scale])+" pristine fish scale, out of hermitage clovers");
+                        uts_stop("three pristine fish scales",
+                            available_amount($item[pristine fish scale]) + " of them, and all "
+                                + get_property("_cloversPurchased") + " clovers for the day are spent",
+                            "the abyss drops them on a Lucky! turn; come back tomorrow, or get the "
+                                + "last ones by hand");
                     adv($location[the caliginous abyss]);
                 }
                 if (!retrieve_item($item[crappy Mer-kin tailpiece]))
-                    abort("Could not build a crappy Mer-kin tailpiece: "
-                        + available_amount($item[sea chaps]) + " sea chaps, "
-                        + available_amount($item[teflon swim fins]) + " swim fins, "
-                        + available_amount($item[pristine fish scale]) + "/3 fish scales.");
+                    uts_stop("a crappy Mer-kin tailpiece",
+                        available_amount($item[sea chaps]) + " sea chaps, "
+                            + available_amount($item[teflon swim fins]) + " swim fins, "
+                            + available_amount($item[pristine fish scale]) + "/3 fish scales",
+                        "gather whichever of those is at zero, then rerun");
             }
 
             if (my_path().id == 0){
                 boss = user_prompt("Which boss?", $strings[Yogurt,Shub,Dad,Abort]);
                 if (boss == "Abort" || boss == "")
-                    abort();
+                    uts_stop("a boss to aim the aftercore run at",
+                        "the prompt was answered Abort, or dismissed",
+                        "rerun and pick Yogurt, Shub or Dad");
             }
 
         }
@@ -2041,7 +2100,9 @@ string DropsItems;
             maximize("50 spooky res, hp",false);
             // Mafia skips the cast below 500 maximum HP.
             if (my_maxhp() < 500)
-                abort("Deep Dark Visions needs 500 maximum HP; you have " + my_maxhp() + ".");
+                uts_stop("500 maximum HP, which mafia requires before it will cast Deep Dark Visions",
+                    "maximum HP is " + my_maxhp(),
+                    "raise maximum HP past 500 and rerun");
             // A cast deals three to four times max HP before resistance. The phrase
             // comes either way; below this even a full HP cast ends Beaten Up.
             int spookyRes = to_int(elemental_resistance($element[spooky]));
@@ -2050,11 +2111,18 @@ string DropsItems;
             int casts;
             while (get_property("dreadScroll3") == "0") {
                 if (casts >= 10)
-                    abort("Deep Dark Visions gave no dreadscroll phrase in 10 casts. Cast it by hand until dreadScroll3 is set, then rerun.");
+                    uts_stop("a dreadscroll phrase out of Deep Dark Visions",
+                        "ten casts produced none; dreadScroll3 is still 0",
+                        "cast Deep Dark Visions by hand until dreadScroll3 is set, then rerun");
                 if (!restore_hp(spookyRes < 67 ? 1000 : my_maxhp()))
-                    abort("Could not restore HP before Deep Dark Visions; see the message above.");
+                    uts_stop("enough HP to survive a Deep Dark Visions cast",
+                        "the restore failed at " + my_hp() + "/" + my_maxhp()
+                            + "; the message above says why",
+                        "heal by hand, or set up mafia's HP restore options, then rerun");
                 if (!use_skill(1, $skill[deep dark visions]))
-                    abort("Could not cast Deep Dark Visions; see the message above.");
+                    uts_stop("a Deep Dark Visions cast",
+                        "the cast itself failed; the message above says why",
+                        "cast it by hand and rerun");
                 casts += 1;
             }
         }
@@ -2238,7 +2306,10 @@ string DropsItems;
                             combatScrollHint();
                             continue;
                         } else {
-                            abort("Missed dreadscroll " + x + " hint");
+                            uts_stop("the hint for dreadscroll " + x,
+                                "the run reached the point where it should have been read and it was not",
+                                "read that hint by hand -- the Mer-kin library and the elementary school "
+                                    + "are where they come from -- then rerun");
                         }
                     }
                 }
@@ -2261,7 +2332,10 @@ string DropsItems;
                             retrieve_item($item[white rice]);
                             eatSushi();
                         }else{
-                            abort("On track for a god run, eat a sushi for the dreadscroll clue");
+                            uts_stop("a sushi, for the dreadscroll clue on a god run",
+                                "no mer-kin worktea left to make one from, at turn " + turns_played(),
+                                "eat a sushi by hand for the clue, or set uts_godRunGuard = false to let "
+                                    + "the run carry on without one");
                         }
                     }
                     if (my_path().id == 0){
@@ -2289,8 +2363,10 @@ string DropsItems;
                             } else if (get_property("questS02Monkees") == "step12") {
                                 finishCaliginous();
                             } else {
-                                abort("Hit a 1-in-40 situation — spend 1 non-free"
-                                    + " turn somewhere and rerun script");
+                                uts_stop("the Caliginous Abyss to be at a step this run knows how to finish",
+                                    "questS02Monkees is " + get_property("questS02Monkees")
+                                        + ", which is the one-in-forty case nothing here handles",
+                                    "spend one non-free turn anywhere and rerun; that is enough to move it on");
                             }
                         }
                     }
@@ -2387,12 +2463,14 @@ string DropsItems;
                     // here -- the antidote is, and the abort names it when it is
                     // what is left standing.
                     if (hpCheckPasses >= 25)
-                        abort("Predicted HP is still too high for the healing on hand after "
-                            + hpCheckPasses + " prayerbead attempts"
-                            + (have_effect($effect[Gummiheart]) > 0
-                                ? " (Gummiheart is still up and no antidote could be pulled)"
-                                : "")
-                            + " -- check what is granting maximum HP.");
+                        uts_stop("Yog-Urt's predicted HP low enough for the healing on hand",
+                            hpCheckPasses + " prayerbead attempts did not bring it down"
+                                + (have_effect($effect[Gummiheart]) > 0
+                                    ? "; Gummiheart is up, and its duration outlasts this cap, so an "
+                                      + "antidote is what is left"
+                                    : ""),
+                            "take an antidote if Gummiheart is what is holding the HP up, otherwise "
+                                + "shed max-HP gear, then rerun");
                     hpCheckPasses += 1;
                     farmPrayerbeads();
                     continue;
@@ -2410,7 +2488,10 @@ string DropsItems;
     void postYogUrt(){
         uts_phase("after Yog-Urt");
         if (get_property("yogUrtDefeated") == "false" && my_path().id == 55)
-            abort("Passing over yogUrt too early — rerun script");
+            uts_stop("Yog-Urt beaten before the run moves past her",
+                "yogUrtDefeated is false",
+                "rerun -- the run will go back and fight her; if she really is dead, the "
+                    + "preference did not get set and wants looking at");
         if (my_path().id == 55){
             // ── Post-YogUrt skate park / gladiator gear ───────────────────────────────
             while (get_property("skateParkStatus") == "war")
@@ -2462,7 +2543,7 @@ string DropsItems;
             return;
         }
         print(why, "red");
-        abort(why);
+        uts_stop(why, "", "the message above says which number is short and by how much");
     }
 
     void Shub(){
@@ -2539,7 +2620,9 @@ string DropsItems;
             }
 
             if (to_int(get_property("lastColosseumRoundWon")) < 15)
-                abort("Skipped over colosseum — rerun script");
+                uts_stop("fifteen colosseum rounds won before the run moves on",
+                    "lastColosseumRoundWon is " + get_property("lastColosseumRoundWon"),
+                    "rerun -- the run will go back and finish the colosseum");
 
             if (my_path().id == 55){
                 while (get_property("questS02Monkees") == "step12")
@@ -2557,7 +2640,10 @@ string DropsItems;
                     else if (highShiny()) {
                         mood("shub");
                     } else
-                        abort("Hit Shub without adequate delevers, this means something went wrong, sorry!");
+                        uts_stop("a way to delevel Shub-Jigguwatt",
+                            "no null-day exploit, and the shiny mood is not available on this account",
+                            "get a null-day exploit, or fight Shub by hand; reaching here without "
+                                + "either means an earlier step did not do what it should have");
                 }
                 foreach ef in $effects[scarysauce]{
                     if (have_effect(ef) > 0 && !cli_execute("uneffect " + ef))
@@ -2671,7 +2757,10 @@ string DropsItems;
             return;
         if (!cli_execute("pull all")) {
             print("pull all didn't empty storage.", "red");
-            abort("pull all didn't empty storage.");
+            uts_stop("storage emptied by \'pull all\'",
+                "it ran and storage still has things in it; the message above says what "
+                    + "mafia made of it",
+                "pull what is left by hand, or check whether a pull limit is in the way");
         }
     }
 
@@ -2798,14 +2887,21 @@ string DropsItems;
             return;
         step("postloop: re-aiming the Patriotic Screech off the construct phylum");
         if (!have_familiar($familiar[Patriotic Eagle]))
-            abort("uts_postLoopRunOutEagleBanish: no Patriotic Eagle in the terrarium, so the screech can't be re-aimed.");
+            uts_stop("a Patriotic Eagle, to re-aim the screech off the construct phylum",
+                "there is none in the terrarium",
+                "get the eagle back, or set uts_postLoopRunOutEagleBanish = false to skip "
+                    + "this postloop step");
         if (!can_adventure($location[The Smut Orc Logging Camp]))
-            abort("uts_postLoopRunOutEagleBanish: The Smut Orc Logging Camp isn't open, and the re-aim needs a place to screech.");
+            uts_stop("somewhere to re-aim the Patriotic Screech",
+                "The Smut Orc Logging Camp is not open, and it is the zone this step uses",
+                "open the camp, or set uts_postLoopRunOutEagleBanish = false to skip this step");
         pullEverything();
         // The eagle's combats are what recharge the screech, so it stays out
         // until the re-aim.
         if (!use_familiar($familiar[Patriotic Eagle]))
-            abort("uts_postLoopRunOutEagleBanish: couldn't take out the Patriotic Eagle.");
+            uts_stop("the Patriotic Eagle as the active familiar",
+                "use_familiar refused it",
+                "put the eagle out by hand and rerun the postloop");
         set_property("_utsPearlFarm", "true");
         set_property("_lastCombatLost", "false");
         int spent;
@@ -2870,7 +2966,10 @@ string DropsItems;
                 break;
             }
             if (my_adventures() == 0 && !drinkPilsner())
-                abort("uts_postLoopRunOutEagleBanish: out of adventures and couldn't drink an astral pilsner within your own liver.");
+                uts_stop("an adventure to spend on recharging the screech",
+                    "none left, and no astral pilsner could be drunk within the liver you have",
+                    "free up some adventures and rerun the postloop, or set "
+                        + "uts_postLoopRunOutEagleBanish = false to stop here for good");
             if (current == $location[none] || get_property(pearlClaimed[current]) == "true") {
                 current = $location[none];
                 foreach loc in pearlZoneRes {
@@ -2957,7 +3056,9 @@ string DropsItems;
             return;
         if (!have_item($item[The Eternity Codpiece])) {
             if (finalPass)
-                abort("uts_postLoopPrepCodpiece: you don't own The Eternity Codpiece.");
+                uts_stop("The Eternity Codpiece, which this postloop step is entirely about",
+                    "you do not own one",
+                    "set uts_postLoopPrepCodpiece = false to skip this step");
             return;
         }
         string verify = visit_url("inventory.php?action=docodpiece");
@@ -2977,8 +3078,9 @@ string DropsItems;
         int held = item_amount($item[unblemished pearl]) + slotted;
         if (held < 5) {
             if (finalPass)
-                abort("uts_postLoopPrepCodpiece: couldn't get to five unblemished pearls (have "
-                    + held + ").");
+                uts_stop("five unblemished pearls, to fill the codpiece",
+                    held + " of them, counting the ones already socketed",
+                    "buy or farm the rest, then rerun the postloop");
             print("uts_postLoopPrepCodpiece: " + held + " unblemished pearls held; topped up after the pearl farm.", "blue");
             return;
         }
@@ -3150,7 +3252,9 @@ void seaMonkees() {
         if (my_path().id == 0){
             uts_why("route: aftercore", "not in a Sea run, so no route to pick");
             if (!retrieve_item($item[aerated diving helmet]))
-                abort("Could not build an aerated diving helmet.");
+                uts_stop("an aerated diving helmet, to adventure in the Sea at all",
+                    "the parts could not be gathered or bought",
+                    "build or pull one by hand; aftercore has no free source for it");
         } else if (highShiny()){
             uts_why("route: high shiny — abyss, diver, collect the corral", whyShiny());
             caliginous("cheap");
@@ -3213,7 +3317,10 @@ void main(string... args) {
         return;
     }
     if (command != "" && command != "postloop")
-        abort("Unknown command \"" + command + "\" -- plain \"UnderTheSea\" runs the loop, \"UnderTheSea sim\" prints the IOTM and pull checklists, \"UnderTheSea postloop\" runs only the postloop steps.");
+        uts_stop("a command this script knows: nothing, sim, or postloop",
+            "it was given " + command,
+            "plain UnderTheSea runs the loop, UnderTheSea sim prints the IOTM and "
+                + "pull checklists, UnderTheSea postloop runs only the postloop steps");
     DropsItems = maximize("Drops Items",false) ? "Drops Items, sea" : "item drop, sea";
     if (command == "postloop") {
         // Postloop-only mode: the finishing steps the run would have reached

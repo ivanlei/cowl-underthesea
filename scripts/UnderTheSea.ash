@@ -461,9 +461,15 @@ string DropsItems;
         if (my_location() == $location[mer-kin colosseum]){
             hpTar = 1;
         } else if (my_location() == $location[mer-kin gymnasium]){
-            hpTar = min(1, 800 / to_float(my_maxhp()));
+            hpTar = min(1, fightingFloor(zoneWorstHit(my_location()), 800) / to_float(my_maxhp()));
         } else {
-            hpTar = min(1, 570 / to_float(my_maxhp()));
+            // 570 was a flat buffer that said nothing about what the zone hits
+            // for, and hpAutoRecovery below is three quarters of it, so the HP a
+            // fight could actually start at was 427 -- one round of a Mer-kin
+            // raider. fightingFloor() keeps 570 wherever it was enough and
+            // raises it to three rounds of this zone's worst hit where it was
+            // never going to be.
+            hpTar = min(1, fightingFloor(zoneWorstHit(my_location()), 570) / to_float(my_maxhp()));
         }
         string hpAutoRecovery = to_float(round(hpTar * 0.75 * 10000))/10000;
         string hpAutoRecoveryTarget = to_float(round(hpTar * 10000))/10000;
@@ -473,6 +479,9 @@ string DropsItems;
     }
 
     void adv(location loc) {
+        // Before anything else: mafia refuses a map-gated zone outright and the
+        // refusal is invisible from here, so say which map is missing instead.
+        requireSeaMap(loc);
         // Re-caps MP recovery at the meat on hand, unless a phase has set its own target since.
         if (get_property("mpAutoRecoveryTarget") == mpTargetSet)
             setMPRecovery();
@@ -1043,24 +1052,28 @@ string DropsItems;
             use_familiar("itdrop");
             codpiece("blood cubic zirconia, peridot of peril");
             tempEquipment("spooky res,sea", if_equip($item[The Eternity Codpiece]) + "monodent of the sea," + bathysphere($item[none]));
+            requireSeaMap($location[Anemone Mine]);
             adv1($location[Anemone Mine]);
         } else if (!contains_text(get_property("_perilLocations"), "195")){
             mood("hotres");
             use_familiar("itdrop");
             codpiece("blood cubic zirconia, peridot of peril");
             tempEquipment("hot res,sea", if_equip($item[The Eternity Codpiece]) + "monodent of the sea," + bathysphere($item[none]));
+            requireSeaMap($location[the marinara trench]);
             adv1($location[the marinara trench]);
         } else if (!contains_text(get_property("_perilLocations"), "197")){
             mood("sleazeres");
             use_familiar("itdrop");
             codpiece("blood cubic zirconia, peridot of peril");
             tempEquipment("sleaze res,sea", if_equip($item[The Eternity Codpiece]) + "monodent of the sea," + bathysphere($item[none]));
+            requireSeaMap($location[the dive bar]);
             adv1($location[the dive bar]); 
         } else if (!contains_text(get_property("_perilLocations"), "196")){
             mood("spookyres");
             use_familiar("itdrop");
             codpiece("blood cubic zirconia, peridot of peril");
             tempEquipment("spooky res,sea", if_equip($item[The Eternity Codpiece]) + "monodent of the sea," + bathysphere($item[none]));
+            requireSeaMap($location[Anemone Mine]);
             adv1($location[Anemone Mine]);
         } else {
             tempEquipment("item drop","monodent of the sea");

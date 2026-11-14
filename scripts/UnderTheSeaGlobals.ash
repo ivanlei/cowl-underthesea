@@ -671,6 +671,84 @@ import <seedfinder/seedfinder.ash>;
         return if_equip($item[Congressional Medal of Insanity]);
     }
 
+    // The hardest hit anything in this zone is expected to land, by mafia's own
+    // expected_damage() -- which reads the gear, buffs and ML in place right
+    // now, so this answers "how dangerous is this zone to me, dressed like
+    // this" rather than quoting a constant.
+    //
+    // get_monsters() returns a MAP, so this takes two names: one would bind the
+    // index. The $monsters[...] literal in fragileForTheSea() is a SET and
+    // takes one, where a second would bind `true`. They read almost the same
+    // and mean opposite things.
+    int zoneWorstHit(location loc) {
+        int worst;
+        foreach i, mob in get_monsters(loc) {
+            if (expected_damage(mob) > worst)
+                worst = expected_damage(mob);
+        }
+        return worst;
+    }
+
+    // The HP a fight in this zone has to start with, given what it hits for.
+    //
+    // FOUR rounds, and the four is the whole point. mafia restores only once HP
+    // falls below hpAutoRecovery, which post_adv() sets to three quarters of
+    // the target, so the TRIGGER is the lowest HP a fight can start at and the
+    // target is not. A flat 570 target therefore meant a 427 floor, which is
+    // one round of a Mer-kin raider: a logged run with 800 maximum HP walked
+    // into fights needing 1182 HP to finish and lost 13 of them. A four-round
+    // target makes the floor three rounds, which is what the number was always
+    // meant to be.
+    //
+    // baseline is what the zone asked for before, and max() keeps it: this can
+    // only ever raise the floor, and only where the old one was never enough.
+    // Pure arithmetic so a test can pin it at the numbers off a real log.
+    int fightingFloor(int worstHit, int baseline) {
+        return max(baseline, 4 * worstHit);
+    }
+
+    // ─── THE ZONES BIG BROTHER GATES BEHIND A MAP ───────────────────────────
+    //
+    // Five Sea zones need a map he sells, and mafia refuses the adventure
+    // outright without one. That refusal is not something this script can see:
+    // the adventure simply does not happen, and KoLmafia's session log does not
+    // record the reason either -- so a logged run spent its last five restarts
+    // dying in the same place with nothing in the log but an equip and
+    // "Ending UnderTheSea". Saying which map is missing is the whole fix.
+    //
+    // Three of the five are free to the class whose stat matches, which is
+    // mafia's rule in seaFloorZoneAvailable(). That rule also wants the Grandpa
+    // quest started, and this does not check it: the run is long past that by
+    // the time it reaches any of these, and a class that would get in free is
+    // left alone rather than stopped on a condition this cannot read cleanly.
+    void requireSeaMap(location loc) {
+        string pref; item map; int cost; stat freeFor;
+        if (loc == $location[Anemone Mine]) {
+            pref = "mapToAnemoneMinePurchased";       map = $item[map to Anemone Mine];        cost = 50; freeFor = $stat[muscle];
+        } else if (loc == $location[The Marinara Trench]) {
+            pref = "mapToTheMarinaraTrenchPurchased"; map = $item[map to the Marinara Trench]; cost = 50; freeFor = $stat[mysticality];
+        } else if (loc == $location[The Dive Bar]) {
+            pref = "mapToTheDiveBarPurchased";        map = $item[map to the Dive Bar];        cost = 50; freeFor = $stat[moxie];
+        } else if (loc == $location[Madness Reef]) {
+            pref = "mapToMadnessReefPurchased";       map = $item[map to Madness Reef];        cost = 50;
+        } else if (loc == $location[The Skate Park]) {
+            pref = "mapToTheSkateParkPurchased";      map = $item[map to the Skate Park];      cost = 25;
+        } else
+            return;
+
+        if (prefOn(pref))
+            return;
+        if (freeFor != $stat[none] && my_primestat() == freeFor)
+            return;
+
+        uts_stop("the " + map + ", which is what opens " + loc,
+            "it has not been bought"
+                + (freeFor == $stat[none] ? ""
+                    : ", and the " + freeFor + " classes that get in without one do not include this"),
+            "buy it from Big Brother for " + cost + " sand dollars and rerun; "
+                + "nothing in the run acquires it on its own");
+    }
+
     string bathysphere(item it) {
         if (!my_familiar().underwater && have_effect($effect[driving waterproofly]) == 0)
             return "little bitty bathysphere,";

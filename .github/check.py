@@ -31,8 +31,8 @@ def ash_files():
     return sorted(f for f in os.listdir(SCRIPTS) if f.endswith(".ash"))
 
 
-def read(f):
-    with open(os.path.join(SCRIPTS, f), encoding="utf-8", errors="replace") as fh:
+def read(f, where=None):
+    with open(os.path.join(where or SCRIPTS, f), encoding="utf-8", errors="replace") as fh:
         return fh.read()
 
 
@@ -41,48 +41,78 @@ def strip_comments(t):
     return re.sub(r"//[^\n]*", "", t)
 
 
-def lines_of(f):
+def lines_of(f, where=None):
     """(lineno, text) with comments kept -- callers that need them say so."""
-    return list(enumerate(read(f).splitlines(), 1))
+    return list(enumerate(read(f, where).splitlines(), 1))
+
+
+TESTS = os.path.join(ROOT, "tests")
+
+
+def trap_files():
+    """scripts/ AND tests/, as (filename, directory, label).
+
+    The traps below are the only checks that read the tests, and they read them
+    because a trap in a test is worse than one in the script: the test then
+    passes vacuously, and the suite becomes the thing telling you the script is
+    fine. A two-variable foreach over $ints[..] in a test of this very file is
+    how that got noticed. Every other check here is about the shipped run and
+    stays on scripts/.
+    """
+    out = [(f, SCRIPTS, f) for f in ash_files()]
+    if os.path.isdir(TESTS):
+        out += [(f, TESTS, "tests/" + f)
+                for f in sorted(os.listdir(TESTS)) if f.endswith(".ash")]
+    return out
 
 
 # ---------------------------------------------------------------- traps
 #
 # Each of these compiles. Each returns a wrong value rather than an error.
 def check_traps():
-    for f in ash_files():
-        for n, line in lines_of(f):
+    for f, where, label in trap_files():
+        for n, line in lines_of(f, where):
             bare = re.sub(r"//.*", "", line)
 
             # to_int() chained onto replace_string() is 0, always: replace_string
             # returns a buffer and the int coercion of a buffer is not its text.
             if re.search(r"replace_string\s*\(.*?\)\s*\.\s*to_int\s*\(", bare):
-                fail(f"{f}:{n}", "to_int() chained onto replace_string() is always 0 -- split it into two statements")
+                fail(f"{label}:{n}", "to_int() chained onto replace_string() is always 0 -- split it into two statements")
 
             # $strings[..] / $items[..] / $monsters[..] are SETS. A two-variable
             # foreach over one binds the member to the first and `true` to the
             # second, so the body compares against "true".
-            m = re.search(r"foreach\s+\w+\s*,\s*(\w+)\s+in\s+\$(strings|items|monsters|skills|effects|locations|stats|phyla)\[", bare)
+            # EVERY plural, not a hand-picked few. ASH's parser builds the
+            # plural by stripping a suffix off any type name in its table, so
+            # $ints[..] and $slots[..] are sets exactly as $items[..] is -- and
+            # the short list this rule started with let a two-variable foreach
+            # over $ints[..] through, in a test written to check this very file.
+            m = re.search(r"foreach\s+\w+\s*,\s*(\w+)\s+in\s+\$("
+                          r"booleans|ints|floats|strings|buffers|matchers|rngs"
+                          r"|items|locations|classes|stats|skills|effects"
+                          r"|familiars|slots|monsters|elements|coinmasters"
+                          r"|phyla|bounties|thralls|servants|vykeas|paths"
+                          r"|modifiers)\[", bare)
             if m:
-                fail(f"{f}:{n}", f"foreach over a $%s[..] SET with two variables binds `true` to `{m.group(1)}`" % m.group(2))
+                fail(f"{label}:{n}", f"foreach over a $%s[..] SET with two variables binds `true` to `{m.group(1)}`" % m.group(2))
 
             # `for i from a to b` counts DOWN when b < a. Fine when meant;
             # flagged so a reader confirms it was.
             m = re.search(r"for\s+\w+\s+from\s+(\d+)\s+to\s+(\d+)", bare)
             if m and int(m.group(2)) < int(m.group(1)):
-                fail(f"{f}:{n}", f"for ... from {m.group(1)} to {m.group(2)} counts DOWN -- confirm that is meant")
+                fail(f"{label}:{n}", f"for ... from {m.group(1)} to {m.group(2)} counts DOWN -- confirm that is meant")
 
             # split_string's separator is a REGEX, so a metacharacter splits on
             # the wrong thing (or on everything).
             for sep in re.findall(r'split_string\s*\([^,]+,\s*"([^"]*)"', bare):
                 if re.search(r"[.^$*+?()\[\]{}|]", sep) and "\\" not in sep:
-                    fail(f"{f}:{n}", f'split_string separator "{sep}" is a regex -- escape the metacharacter')
+                    fail(f"{label}:{n}", f'split_string separator "{sep}" is a regex -- escape the metacharacter')
 
             # ASH reserved words used as identifiers do not compile, but these
             # read as fine to a human writing them.
             m = re.search(r"\b(?:int|string|boolean|float|item|monster|location|skill|effect|familiar|slot|stat|buffer)\s+(from|to|in|by|until|stat)\b\s*[;=,)]", bare)
             if m:
-                fail(f"{f}:{n}", f"`{m.group(1)}` is an ASH reserved word -- rename the variable")
+                fail(f"{label}:{n}", f"`{m.group(1)}` is an ASH reserved word -- rename the variable")
 
 
 # ------------------------------------------------ boolean preference checks

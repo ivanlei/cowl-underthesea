@@ -10,6 +10,12 @@
 # its options are not documented anywhere to answer it from. The two descending
 # loops are deliberate; both say so in a comment beside them.
 #
+# _utsMissileFailed is the same shape as the dread block and is listed for the
+# same reason: the guard is real and dead, but nothing in these scripts fires
+# the Asdon's missile launcher, so there is no attempt whose failure would set
+# it. Making it live means deciding what "failed" is, which is a call for
+# whoever wants the refuel to stop retrying, not for the check that found it.
+#
 # Regenerate with: python3 .github/check.py --baseline > .github/check-baseline.txt
 UnderTheSeaGlobals.ash: for ... from 8 to 6 counts DOWN -- confirm that is meant
 UnderTheSeaGlobals.ash: for ... from 9 to 3 counts DOWN -- confirm that is meant
@@ -18,3 +24,4 @@ UnderTheSea_Choice.ash: catalogChecked == "false" is always FALSE -- (undefined,
 UnderTheSea_Choice.ash: DS1 == "false" is always FALSE -- (undefined, so ""), and nothing writes "false"
 UnderTheSea_Choice.ash: DS6 == "false" is always FALSE -- (undefined, so ""), and nothing writes "false"
 UnderTheSea_Choice.ash: DS8 == "false" is always FALSE -- (undefined, so ""), and nothing writes "false"
+UnderTheSea.ash: _utsMissileFailed is read here and written nowhere -- mafia does not define it either, so the guard on it never fires

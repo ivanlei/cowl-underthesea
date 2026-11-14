@@ -1517,7 +1517,7 @@ string DropsItems;
             else if (lowShiny())
                 conditional += if_equip($item[Congressional Medal of Insanity]);
 
-            if ((get_property("_monsterHabitatsMonster") == "eye in the darkness" || get_property("_monsterHabitatsMonster") == "slithering thing") && get_property("_monsterHabitatsFightsLeft") > 0)
+            if ((get_property("_monsterHabitatsMonster") == "eye in the darkness" || get_property("_monsterHabitatsMonster") == "slithering thing") && to_int(get_property("_monsterHabitatsFightsLeft")) > 0)
                 conditional += "shark jumper,scale-mail underwear,";
             if ((highShiny() || available_amount($item[closed-circuit pay phone]) == 0 || lowShiny()) && item_amount($item[pristine fish scale]) < 6)
                 mood("itdrop");
@@ -1628,7 +1628,7 @@ string DropsItems;
                     } else if (total_turns_played( ) < to_int(get_property("_lastFitzsimmonsHatch")) + 20){
                         use_familiar("itdrop");
                         if (!highShiny()){
-                            if ((get_property("_monsterHabitatsMonster") == "eye in the darkness" || get_property("_monsterHabitatsMonster") == "slithering thing") && get_property("_monsterHabitatsFightsLeft") > 0)
+                            if ((get_property("_monsterHabitatsMonster") == "eye in the darkness" || get_property("_monsterHabitatsMonster") == "slithering thing") && to_int(get_property("_monsterHabitatsFightsLeft")) > 0)
                                 conditional += "shark jumper,scale-mail underwear,";
                             if (!gotPeriled($location[The Wreck of the Edgar Fitzsimmons]))
                                 conditional += if_equip($item[peridot of peril]);

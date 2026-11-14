@@ -170,6 +170,12 @@ def check_bare_aborts():
 #
 # A guard that tests a preference against a value it never holds is dead, and a
 # dead guard reads exactly like a live one.
+# Filled by check_pref_defaults, read by check_unwritten_prefs below, which
+# would otherwise report the same four dread-card guards in a second wording.
+# Same lesson as check_bare_aborts' brace counting: one fault, one finding.
+reported_dead = set()
+
+
 def check_pref_defaults(data):
     defaults = {}
     path = os.path.join(data, "defaults.txt")
@@ -218,6 +224,7 @@ def check_pref_defaults(data):
                     continue
                 verdict = "always FALSE" if op == "==" else "always TRUE"
                 where = '(undefined, so "")' if pref not in defaults else f'default "{real}"'
+                reported_dead.add(pref)
                 fail(f"{f}:{n}", f'{pref} {op} "{lit}" is {verdict} -- {where}, and nothing writes "{lit}"')
 
 
@@ -358,11 +365,141 @@ def check_daily_limits(data):
                                  + "/".join(str(x) for x in sorted(limits[pref])))
 
 
+# ------------------------------------------- a preference nothing ever writes
+#
+# check_pref_defaults above catches the narrow shape: a comparison against a
+# falsy literal the preference never holds. This catches the general one, by
+# name instead of by value -- the script reads a preference that neither mafia
+# nor this script ever writes, so the guard around it cannot fire whatever it
+# is compared against.
+#
+# It exists because moving those comparisons onto prefOn()/prefOff() hid them
+# from the rule above, which can only see a `==`. prefOff("_utsMissileFailed")
+# reads exactly like a real guard and is one on a preference nothing in the
+# repo sets, so the Asdon refuel it is meant to stop retrying is never stopped.
+FOREIGN_PREFS = (
+    # Other people's scripts own these and write them in their own runs.
+    "garbo_", "pearlo_",
+)
+
+
+def check_unwritten_prefs(data):
+    defaults = set()
+    path = os.path.join(data, "defaults.txt")
+    if not os.path.exists(path):
+        return                      # check_pref_defaults already said so
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            if line.startswith("#") or not line.strip():
+                continue
+            parts = line.rstrip("\n").split("\t")
+            if len(parts) >= 2:
+                defaults.add(parts[1])
+
+    # prefOn/prefOff ARE reads. Leaving them out is how this check would have
+    # the same blind spot it was written to close.
+    read_re = re.compile(r'(?:get_property|prefOn|prefOff)\s*\(\s*"([^"]+)"\s*\)')
+    write_re = re.compile(r'set_property\s*\(\s*"([^"]+)"\s*(,|\+)')
+    reads, written, built = {}, set(), set()
+    for f in ash_files():
+        body = strip_comments(read(f))
+        for n, line in enumerate(body.splitlines(), 1):
+            for m in read_re.finditer(line):
+                reads.setdefault(m.group(1), f"{f}:{n}")
+        for m in write_re.finditer(body):
+            # set_property("pitchNum" + before, ...) writes pitchNum1..8 and
+            # names none of them, so the literal is a PREFIX, not a preference.
+            (built if m.group(2) == "+" else written).add(m.group(1))
+
+    for pref, where in sorted(reads.items()):
+        if pref in defaults or pref in written or pref in reported_dead:
+            continue
+        # uts_ names are the player's own switches: set by hand in mafia and
+        # deliberately absent until then, which check_pref_defaults skips too.
+        if pref.startswith("uts_") or pref.startswith(FOREIGN_PREFS):
+            continue
+        if any(pref.startswith(b) for b in built):
+            continue
+        fail(where, f"{pref} is read here and written nowhere -- "
+                    "mafia does not define it either, so the guard on it never fires")
+
+
+# ------------------------------------ a preference ordered against a number
+#
+# A preference is text, and ASH compares text to a number as text. Measured in
+# the gCLI: "9" > 10 is TRUE and "10" > 2 is FALSE. So an ordering comparison
+# straight off get_property() is right only while the two sides happen to have
+# the same number of digits, and silently wrong the day one of them does not.
+#
+# Every numeric preference read in these scripts already goes through to_int().
+# This is what keeps the next one from skipping it.
+#
+# EQUALITY IS LEFT ALONE on purpose. "0" == "0" whichever way it is read, so
+# the dozen `== 0` reads are correct, and flagging them would be a dozen
+# findings nobody is going to act on.
+def check_pref_numbers():
+    pat = re.compile(r'(to_int|to_float|to_int_for|count)?\s*\(?\s*'
+                     r'get_property\s*\(\s*"([^"]+)"\s*\)\s*\)?\s*'
+                     r'(<=|>=|<|>)\s*(-?\d+)')
+    for f in ash_files():
+        for n, line in lines_of(f):
+            bare = re.sub(r"//.*", "", line)
+            for m in pat.finditer(bare):
+                if m.group(1):
+                    continue
+                fail(f"{f}:{n}", f'{m.group(2)} {m.group(3)} {m.group(4)} compares text, '
+                                 f'not numbers -- wrap it in to_int(), or "9" {m.group(3)} 10 '
+                                 "answers the wrong way")
+
+
+# ------------------------- a monster name that is the start of another one
+#
+# banishedMonsters is "name:banisher:turn:name:...", so contains_text() against
+# a bare name matches every longer name as well. The script already carries the
+# workaround: "sea cow:" is written with the colon precisely because "sea cow"
+# finds a banished sea cowboy. Nothing stops the next one being written without
+# it, and it would read fine.
+#
+# Checked against mafia's own monster list rather than a list kept here, and
+# only a name some other monster extends is reported -- the "school of many"
+# and "Mer-kin rustler" reads are unambiguous and stay quiet.
+def check_monster_prefixes(data):
+    path = os.path.join(data, "monsters.txt")
+    if not os.path.exists(path):
+        fail("monsters.txt", f"not found in {data}")
+        return
+    names = set()
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            if line.startswith("#") or not line.strip():
+                continue
+            names.add(line.split("\t")[0].strip().lower())
+
+    pat = re.compile(r'contains_text\s*\([^,]*get_property\s*\(\s*"([^"]+)"\s*\)[^,]*,\s*"([^"]*)"')
+    for f in ash_files():
+        for n, line in lines_of(f):
+            bare = re.sub(r"//.*", "", line)
+            for m in pat.finditer(bare):
+                pref, needle = m.group(1), m.group(2).strip()
+                # A needle the author already delimited is the correct form.
+                if not needle or needle[-1] in ":,;|":
+                    continue
+                low = needle.lower()
+                if low not in names:
+                    continue        # not a monster name, so not this preference's shape
+                longer = sorted(x for x in names if x.startswith(low) and x != low)
+                if longer:
+                    fail(f"{f}:{n}", f'"{needle}" in {pref} also matches '
+                                     + ", ".join(f'"{x}"' for x in longer[:3])
+                                     + ' -- end the needle with its delimiter, as "sea cow:" does')
+
+
 # WHERE MAFIA'S DATA FILES ARE.
 #
-# Four checks read them, and they are not in this repository: defaults.txt
-# says what an unset preference reads as, monsters.txt and items.txt say what an
-# id is, and dailylimits.txt says what a daily cap is. Taking them from mafia
+# Five checks read them, and they are not in this repository: defaults.txt
+# says what an unset preference reads as and which ones mafia owns at all,
+# monsters.txt and items.txt say what an id is and what names start with
+# another, and dailylimits.txt says what a daily cap is. Taking them from mafia
 # rather than copying them here is the point --
 # a copy would be another number to keep in step.
 #
@@ -415,12 +552,16 @@ def main():
     check_bare_aborts()
     check_bool_prefs()
     check_choice_fallthrough()
+    check_pref_numbers()
     if data is None:
-        print("note: no KoLmafia data found, so the preference-default, id/comment")
-        print("      and daily-cap checks did not run. Pass --mafia <checkout> or")
+        print("note: no KoLmafia data found, so the preference-default, unwritten-")
+        print("      preference, monster-prefix, id/comment and daily-cap checks did")
+        print("      not run. Pass --mafia <checkout> or")
         print("      --data <dir>.")
     else:
         check_pref_defaults(data)
+        check_unwritten_prefs(data)
+        check_monster_prefixes(data)
         check_id_comments(data)
         check_daily_limits(data)
     known = baseline()

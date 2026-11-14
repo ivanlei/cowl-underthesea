@@ -298,9 +298,139 @@ import <seedfinder/seedfinder.ash>;
         return floor(base * (1 + numeric_modifier("Spell Damage Percent") / 100));
     }
 
+// ─── SAYING WHERE THE RUN IS ────────────────────────────────────────────────
+//
+// WHAT THIS IS FOR. COwliCK: "when it aborts for some reason, it's super hard
+// to know why." An abort used to print one phrase with no context -- "get
+// fishy", "Software glitch failed" -- into a gCLI that had said nothing about
+// where the run had got to or why it had gone that way, and the run is a
+// thousand turns long. Working backwards from the phrase meant reading the
+// script.
+//
+// So three things, and the third is the one that answers him:
+//
+//   a phase announces itself, so the gCLI has a spine to read against;
+//   a decision says what it weighed, so a surprising branch is visible as it
+//     happens rather than inferred afterwards;
+//   an abort prints the last ten lines of both, plus what it needed, what was
+//     actually there, and what to do.
+//
+// HOW LOUD, from `uts_trace`:
+//
+//   quiet    phases and aborts, and nothing else
+//   normal   adds the decisions and the step() lines  (the default)
+//   verbose  adds detail a decision would otherwise only summarise
+//
+// Normal is the default, which is COwliCK's call -- a run that aborts once is
+// a run you would otherwise have to do AGAIN to find out why, and the second
+// run is a different day with different gear and different drops.
+//
+// step() PRINTS AT NORMAL, not only at verbose. It is 54 lines the run has
+// always shown; gating them behind a level nobody has set would make this
+// change quieter than what it replaces, which is the opposite of the point.
+    string utsTraceLevel() {
+        string level = get_property("uts_trace");
+        return level == "" ? "normal" : level;
+    }
+
+// Nothing asks for verbose yet; it is here so that a decision which wants to
+// show its working has somewhere to put it without a second preference.
+    boolean utsTraceVerbose() {
+        return utsTraceLevel() == "verbose";
+    }
+
+    boolean utsTraceQuiet() {
+        return utsTraceLevel() == "quiet";
+    }
+
+// THE LAST TEN LINES, kept so an abort can show how the run got where it is.
+//
+// In memory rather than in a preference: a line per step over a thousand turns
+// is a lot of writes for something only ever read at the moment it stops. The
+// PHASE is a preference as well (below), because that is the part worth having
+// after the fact and the part the CCS can see.
+    string [int] utsTrail;
+    string utsTrailHead;     // the phase, repeated into an abort
+
+    void utsRemember(string line) {
+        utsTrail[count(utsTrail)] = line;
+        // Ten is what fits on screen without becoming the thing you have to
+        // read past to find the abort.
+        if (count(utsTrail) > 10) {
+            string [int] kept;
+            foreach i, l in utsTrail
+                if (i > 0) kept[count(kept)] = l;
+            utsTrail = kept;
+        }
+    }
+
 // Progress tracker
     void step(string msg) {
-        print("UTS: " + msg, "blue");
+        utsRemember(msg);
+        if (utsTraceQuiet()) return;
+        print("UTS:   " + msg, "blue");
+    }
+
+// A PHASE OF THE RUN, which is what seaMonkees() is a list of.
+//
+// Also written to _uts_phase, because the CCS is a separate script invocation
+// and does not share module state -- so a combat-side abort can still say
+// which phase of the run it was in, and the preference is still there to read
+// once the run has stopped.
+// A phase prints at every level, quiet included: it is the spine the rest is
+// read against, and twenty lines over a thousand turns is not noise.
+    void uts_phase(string name) {
+        utsTrailHead = name;
+        set_property("_uts_phase", name);
+        utsRemember("── " + name);
+        print("UTS ──── " + name + " ────", "blue");
+    }
+
+// WHAT WAS NEEDED AND WHAT THERE WAS, in one phrasing.
+//
+// One function rather than a sentence written out at each site, so that a
+// farming loop's trace line and the abort that follows when the farming fails
+// read identically -- "sea leather: need 1, have 0" in both. Two spellings of
+// the same shortfall is how you end up unsure whether they are the same
+// shortfall.
+    string uts_need(string what, int want, int have) {
+        return what + ": need " + want + ", have " + have;
+    }
+
+// WHY THE RUN WENT THAT WAY. `because` carries the numbers it turned on --
+// "garbo_valueOfFreeFight 0 <= valueOfAdventure 3000" -- rather than the name
+// of the predicate, because the name is in the script and the numbers are not.
+    void uts_why(string choice, string because) {
+        string line = choice + (because == "" ? "" : " — " + because);
+        utsRemember(line);
+        if (utsTraceQuiet()) return;
+        print("UTS   " + line, "blue");
+    }
+
+// AN ABORT THAT SAYS ALL FOUR THINGS: where it was, what it needed, what was
+// actually there, and what you can do about it.
+//
+// `had` and `fix` may be empty where there is honestly nothing to add -- but
+// an empty `fix` is worth a second look, because "what do I do now" is the
+// question that made this file necessary.
+    void uts_stop(string needed, string had, string fix) {
+        string where = utsTrailHead == "" ? get_property("_uts_phase") : utsTrailHead;
+        print("UTS ────────────────────────────────────────────────", "red");
+        print("UTS Aborting" + (where == "" ? "" : ", in " + where)
+            + ", " + my_turncount() + " turns in.", "red");
+        if (count(utsTrail) > 0) {
+            print("UTS How it got here:", "red");
+            foreach i, l in utsTrail
+                print("UTS     " + l, "gray");
+        }
+        print("UTS What it needed: " + needed, "red");
+        if (had != "") print("UTS What there was: " + had, "red");
+        if (fix != "") print("UTS What to do:     " + fix, "red");
+        abort(needed);
+    }
+
+    void uts_stop(string needed, string fix) {
+        uts_stop(needed, "", fix);
     }
 
 // ─── EQUIPMENT AND OUTFIT HELPERS ───────────────────────────────────────────
